@@ -2052,8 +2052,7 @@ class SettingsErrorBoundary extends React.Component{
 
 function Settings({customFields,setCustomFields,buyBox,setBuyBox,saveCF,saveBB,onRestoreDeal,toast}){
   const[tab,setTab]=useState("custom");
-  // defensive copy — ensure all values are strings/numbers, never undefined
-  const safeBB={
+  const[bb,setBb]=useState(()=>({
     minRevenue:String(buyBox?.minRevenue||""),
     maxRevenue:String(buyBox?.maxRevenue||""),
     minSde:String(buyBox?.minSde||""),
@@ -2061,10 +2060,18 @@ function Settings({customFields,setCustomFields,buyBox,setBuyBox,saveCF,saveBB,o
     maxMultiple:String(buyBox?.maxMultiple||""),
     minDscr:String(buyBox?.minDscr||""),
     targetIndustries:Array.isArray(buyBox?.targetIndustries)?buyBox.targetIndustries:[],
-  };
-  const[bb,setBb]=useState(safeBB);
-  const updateBb=useCallback((k,v)=>setBb(p=>({...p,[k]:v})),[]);
-  const saveBuyBox=useCallback(()=>{saveBB(bb);},[bb,saveBB]);
+  }));
+  const updateBb=(k,v)=>setBb(p=>({...p,[k]:v}));
+  const saveBuyBox=()=>saveBB(bb);
+  const resetBb=()=>setBb({
+    minRevenue:String(buyBox?.minRevenue||""),
+    maxRevenue:String(buyBox?.maxRevenue||""),
+    minSde:String(buyBox?.minSde||""),
+    minEbitda:String(buyBox?.minEbitda||""),
+    maxMultiple:String(buyBox?.maxMultiple||""),
+    minDscr:String(buyBox?.minDscr||""),
+    targetIndustries:Array.isArray(buyBox?.targetIndustries)?buyBox.targetIndustries:[],
+  });
 
   return(
     <div>
@@ -2147,7 +2154,7 @@ function Settings({customFields,setCustomFields,buyBox,setBuyBox,saveCF,saveBB,o
           </div>
           <div style={{marginTop:20,display:"flex",gap:10,alignItems:"center"}}>
             <button type="button" className="btn btn-primary" onClick={saveBuyBox}>Save Buy-Box</button>
-            <button type="button" className="btn btn-secondary" onClick={()=>setBb(safeBB)}>Reset</button>
+            <button type="button" className="btn btn-secondary" onClick={resetBb}>Reset</button>
             {bb.targetIndustries.length>0&&<span style={{fontSize:12,color:"var(--text-3)"}}>{bb.targetIndustries.length} industr{bb.targetIndustries.length===1?"y":"ies"} selected</span>}
           </div>
         </div>
@@ -2459,6 +2466,7 @@ function App(){
     const id=setInterval(poll,30000);
     return()=>clearInterval(id);
   },[appState,currentUser]);
+  const saveCF=cf=>{try{localStorage.setItem("bba_cf",JSON.stringify(cf));}catch{}};
   const saveBB=bb=>{setBuyBox(bb);try{localStorage.setItem("bba_buybox",JSON.stringify(bb));}catch{}toast("Buy-box saved","success");};
 
   const odCnt=tasks.filter(t=>isOD(t.dueDate,t.status)).length;

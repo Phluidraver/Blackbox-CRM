@@ -4,11 +4,45 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Blackbox Advisory — Acquisition CRM</title>
+<script>
+// Global navigation prevention — catches ALL navigation attempts
+(function(){
+  // Block file:// and local navigation caused by inputs
+  var _push=history.pushState.bind(history);
+  var _replace=history.replaceState.bind(history);
+  history.pushState=function(s,t,u){if(u&&String(u).match(/^\?|^#/))_push(s,t,u);};
+  history.replaceState=function(s,t,u){if(!u||String(u).match(/^\?|^#|^https?/))_replace(s,t,u);};
+  // Prevent ALL form submissions everywhere
+  document.addEventListener("submit",function(e){e.preventDefault();e.stopPropagation();},true);
+  // Prevent Enter key in ALL inputs from doing anything browser-level
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Enter"&&e.target.tagName==="INPUT"){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  },true);
+  // Prevent anchor clicks from navigating
+  document.addEventListener("click",function(e){
+    var el=e.target.closest("a");
+    if(el&&(!el.href||el.href==="#"||el.href==="javascript:void(0)")){
+      e.preventDefault();
+    }
+  },true);
+})();
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+<script>
+// Check if required libraries loaded
+window.addEventListener("load",function(){
+  if(typeof React==="undefined"||typeof ReactDOM==="undefined"||typeof Babel==="undefined"){
+    document.getElementById("root").innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#F7F7F8;font-family:sans-serif;"><div style="text-align:center;max-width:480px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:18px;font-weight:700;margin-bottom:12px;color:#1A1A1A">Cannot load CRM from local file</div><div style="font-size:14px;color:#525252;line-height:1.7;margin-bottom:20px">This tool requires an internet connection to load its libraries (React, Babel).<br><br>Please open it from:<br><strong style="color:#F15C2B">https://blackbox-crm.pages.dev</strong></div><a href="https://blackbox-crm.pages.dev" style="display:inline-block;padding:12px 24px;background:#F15C2B;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Open CRM →</a></div></div>';
+  }
+});
+</script>
 <style>
 :root{--primary:#F15C2B;--primary-dark:#d44d20;--primary-light:rgba(241,92,43,0.10);--accent:#525252;--white:#fff;--bg:#F7F7F8;--border:#E5E5E7;--text:#1A1A1A;--text-2:#525252;--text-3:#9A9A9A;--shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow:0 4px 12px rgba(0,0,0,0.08);--shadow-lg:0 20px 40px rgba(0,0,0,0.12);--radius:10px;--radius-sm:6px;--sidebar-w:230px;--topbar-h:60px;}
 input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-results-button,input[type="search"]::-webkit-search-results-decoration{display:none;}
@@ -332,14 +366,14 @@ const pct=(n,d)=>d?Math.round(n/d*100):0;
 function CurrencyInput({value,onChange,className,placeholder,style}){
   const[focused,setFocused]=useState(false);
   const dv=focused?(value||""):(value?(()=>{const n=parseFloat(value);return isNaN(n)||value===""?"":`$${n.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0})}`;})():"");
-  return <input className={className||"form-input"} style={style} type="search" inputMode="decimal" value={dv} placeholder={focused?placeholder||"0":placeholder||""} onChange={e=>{const r=e.target.value.replace(/[$,]/g,"");onChange({target:{value:r}});}} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} autoComplete="off" data-lpignore="true"/>;
+  return <input className={className||"form-input"} style={style} type="text" inputMode="decimal" value={dv} placeholder={focused?placeholder||"0":placeholder||""} onChange={e=>{const r=e.target.value.replace(/[$,]/g,"");onChange({target:{value:r}});}} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}} autoComplete="off" data-lpignore="true"/>;
 }
 
 /* ── PctInput ────────────────────────────────────────────────── */
 function PctInput({value,onChange,className,placeholder}){
   const[focused,setFocused]=useState(false);
   const dv=focused?(value||""):(value!==""&&value!==undefined&&!isNaN(parseFloat(value))?(parseFloat(value).toFixed(1)+"%"):"");
-  return <input className={className||"form-input"} type="search" inputMode="decimal" value={dv} placeholder={focused?placeholder||"0.0":placeholder||""} onChange={e=>{const r=e.target.value.replace(/[%]/g,"");onChange({target:{value:r}});}} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} autoComplete="off" data-lpignore="true"/>;
+  return <input className={className||"form-input"} type="text" inputMode="decimal" value={dv} placeholder={focused?placeholder||"0.0":placeholder||""} onChange={e=>{const r=e.target.value.replace(/[%]/g,"");onChange({target:{value:r}});}} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}} autoComplete="off" data-lpignore="true"/>;
 }
 
 /* ── MultiSelect: multi-user assignee picker ─────────────────── */
@@ -367,9 +401,9 @@ function MultiSelect({values=[],onChange,users=[],placeholder="Assign users…"}
 }
 
 /* ── Constants ───────────────────────────────────────────────── */
-const STAGES=["Contacted","CIM Received","Discovery/Broker Call","Financials Received","LOI Submitted","LOI Accepted","Due Diligence","Financing","Closed","Dead"];
-const STAGE_COLOR={Contacted:"blue","CIM Received":"purple","Discovery/Broker Call":"purple","Financials Received":"amber","LOI Submitted":"amber","LOI Accepted":"teal","Due Diligence":"teal",Financing:"orange",Closed:"green",Dead:"red"};
-const STAGE_HEX={Contacted:"#60A5FA","CIM Received":"#7C3AED","Discovery/Broker Call":"#8B5CF6","Financials Received":"#F59E0B","LOI Submitted":"#F97316","LOI Accepted":"#14B8A6","Due Diligence":"#0D9488",Financing:"#06B6D4",Closed:"#22C55E",Dead:"#EF4444"};
+const STAGES=["Contacted","CIM Received","Discovery/Broker Call","Financials Received","LOI Submitted","LOI Accepted","Due Diligence","Financing","Closed/Won","Stalled","Closed/Lost"];
+const STAGE_COLOR={Contacted:"blue","CIM Received":"purple","Discovery/Broker Call":"purple","Financials Received":"amber","LOI Submitted":"amber","LOI Accepted":"teal","Due Diligence":"teal",Financing:"orange","Closed/Won":"green",Stalled:"gray","Closed/Lost":"red"};
+const STAGE_HEX={Contacted:"#60A5FA","CIM Received":"#7C3AED","Discovery/Broker Call":"#8B5CF6","Financials Received":"#F59E0B","LOI Submitted":"#F97316","LOI Accepted":"#14B8A6","Due Diligence":"#0D9488",Financing:"#06B6D4","Closed/Won":"#22C55E",Stalled:"#9CA3AF","Closed/Lost":"#EF4444"};
 const DEAD_REASONS=["Bad Industry","Customer Concentration","Failed Diligence","Financing Not Viable","Lease / Real Estate Issue","Legal / Compliance Risk","Other","Personal Bandwidth","Poor Responsiveness","Poor Strategic Fit","Seller Unrealistic","Too Expensive","Too Owner Dependent","Weak Cash Flow"];
 const LEAD_SOURCES=["Accountant / Advisor","Bank / Lender","Broker Referral","Brokerage Site","Cold Call","Email Outreach","General Referral","Industry Website","LinkedIn"];
 const INDUSTRIES=["Construction","eCommerce","Energy","Finance","Food & Beverage","Healthcare","Home Services","Manufacturing","Marketing","Other","Professional Services","Real Estate","Retail","SaaS","Technology","Transportation"];
@@ -453,7 +487,7 @@ function SearchBox({value,onChange,placeholder,className}){
 }
 function NoFillInput({className,value,onChange,placeholder,type,style,onFocus,onBlur}){
   const isSpec=type==="date"||type==="number"||type==="time";
-  return <input className={className||"form-input"} style={style} type={isSpec?type:"search"} value={value||""} placeholder={placeholder||""} onChange={onChange} onFocus={onFocus} onBlur={onBlur} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true"/>;
+  return <input className={className||"form-input"} style={style} type={isSpec?type:"text"} value={value||""} placeholder={placeholder||""} onChange={onChange} onFocus={onFocus} onBlur={onBlur} onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true"/>;
 }
 function Combobox({value,onChange,options,placeholder}){
   const[open,setOpen]=useState(false);const ref=useRef();
@@ -524,8 +558,8 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
   const tog=k=>{setDirty(true);setForm(p=>({...p,[k]:!p[k]}));};
   const setCF=(id,val)=>{setDirty(true);setForm(p=>({...p,customValues:{...p.customValues,[id]:val}}));};
   const c=useMemo(()=>computeDeal(form),[form]);
-  const handleStageChange=e=>{const s=e.target.value;setDirty(true);setForm(p=>({...p,stage:s,stageEntryDate:todayStr(),...(s==="Closed"?{closedDate:todayStr()}:{}),...(s==="Dead"?{deadDate:todayStr(),status:"Dead"}:{})}));};
-  const handleStatusChange=e=>{const s=e.target.value;setDirty(true);setForm(p=>({...p,status:s,...(s==="Dead"?{deadDate:todayStr(),stage:"Dead"}:{}),...(s==="Closed"?{closedDate:todayStr(),stage:"Closed"}:{})}));};
+  const handleStageChange=e=>{const s=e.target.value;setDirty(true);setForm(p=>({...p,stage:s,stageEntryDate:todayStr(),...(s==="Closed/Won"?{closedDate:todayStr(),status:"Closed/Won"}:{}),...(s==="Closed/Lost"?{deadDate:todayStr(),status:"Closed/Lost"}:{})}));};
+  const handleStatusChange=e=>{const s=e.target.value;setDirty(true);setForm(p=>({...p,status:s,...(s==="Closed/Lost"?{deadDate:todayStr(),stage:"Closed/Lost"}:{}),...(s==="Closed/Won"?{closedDate:todayStr(),stage:"Closed"}:{})}));};
   const tryClose=()=>{if(dirty)setConfirmClose(true);else onClose();};
   const TABS=[{id:"core",label:"Core"},{id:"financials",label:"Financials"},{id:"financing",label:"Financing"},{id:"scoring",label:"Scoring"},{id:"diligence",label:"Diligence"},{id:"decision",label:"Decision"},{id:"claude",label:"🤖 Claude Analysis"},{id:"files",label:"📎 Files"}];
   return(<div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)e.preventDefault();}}>
@@ -546,6 +580,24 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
             <button type="button" className={`toggle ${form.brokerDeal?"on":""}`} onClick={()=>tog("brokerDeal")}/>
             <span style={{fontSize:13,color:"var(--text-2)"}}>{form.brokerDeal?"Yes — broker fields shown below":"No"}</span>
           </div>
+          {/* ── PIPELINE STATUS (moved to top) ── */}
+          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:8,padding:"14px 16px",marginBottom:14}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📊 Pipeline Status</div>
+            <div className="form-grid">
+              <div className="fg"><label className="form-label">Status</label><select className="form-select" value={form.status} onChange={handleStatusChange}>{["Active","Closed/Won","Closed/Lost","Paused"].map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="fg"><label className="form-label">Stage</label><select className="form-select" value={form.stage} onChange={handleStageChange}>{STAGES.map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="fg"><label className="form-label">Date Added</label><NoFillInput className="form-input" type="date" value={form.dateAdded} onChange={f("dateAdded")}/></div>
+              <div className="fg"><label className="form-label">Last Activity</label><NoFillInput className="form-input" type="date" value={form.lastActivityDate} onChange={f("lastActivityDate")}/></div>
+              <div className="fg"><label className="form-label">Est. Close Date</label><NoFillInput className="form-input" type="date" value={form.estimatedCloseDate} onChange={f("estimatedCloseDate")}/></div>
+              <div className="fg"><label className="form-label">Close Probability %</label><PctInput value={form.closeProbabilityPct} onChange={f("closeProbabilityPct")} placeholder="50.0"/></div>
+              <div className="fg"><label className="form-label">LOI Submitted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiSubmitted?"on":""}`} onClick={()=>tog("loiSubmitted")}/><span style={{fontSize:13}}>{form.loiSubmitted?"Yes":"No"}</span></div></div>
+              <div className="fg"><label className="form-label">LOI Accepted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiAccepted?"on":""}`} onClick={()=>tog("loiAccepted")}/><span style={{fontSize:13}}>{form.loiAccepted?"Yes":"No"}</span></div></div>
+              {form.loiAccepted&&<div className="fg"><label className="form-label">Exclusivity End Date</label><NoFillInput className="form-input" type="date" value={form.exclusivityEndDate} onChange={f("exclusivityEndDate")}/></div>}
+              {(form.status==="Closed/Lost"||form.stage==="Closed/Lost")&&<div className="fg"><label className="form-label">Dead Reason</label><select className="form-select" value={form.deadReason} onChange={f("deadReason")}><option value="">Select…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select></div>}
+              {(form.status==="Closed/Won"||form.stage==="Closed/Won")&&<div className="fg"><label className="form-label">Close Outcome</label><select className="form-select" value={form.closeOutcome} onChange={f("closeOutcome")}><option value="">Select…</option>{["Acquired","Lost to Another Buyer","Withdrawn"].map(o=><option key={o}>{o}</option>)}</select></div>}
+            </div>
+          </div>
+          {/* ── DEAL IDENTITY ── */}
           <div style={{background:"#F0F7FF",border:"1px solid #BFDBFE",borderRadius:8,padding:"14px 16px",marginBottom:14}}>
             <div style={{fontSize:10,fontWeight:700,color:"#2563EB",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🏢 Deal Identity</div>
             <div className="form-grid">
@@ -557,6 +609,7 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
               <div className="fg"><label className="form-label">NDA Signed?</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.ndaSigned?"on":""}`} onClick={()=>tog("ndaSigned")}/><span style={{fontSize:13}}>{form.ndaSigned?"Yes":"No"}</span></div></div>
               <div className="fg"><label className="form-label">Company Website</label><NoFillInput className="form-input" value={form.companyWebsite||""} onChange={f("companyWebsite")}/></div>
               {form.brokerDeal&&<div className="fg"><label className="form-label">Listing URL</label><NoFillInput className="form-input" value={form.listingUrl||""} onChange={f("listingUrl")}/></div>}
+              {form.brokerDeal&&<div className="fg"><label className="form-label">DataRoom Link</label><NoFillInput className="form-input" value={form.dataRoomLink||""} onChange={f("dataRoomLink")} placeholder="https://…"/></div>}
             </div>
           </div>
           <div style={{background:"#F0FFF4",border:"1px solid #BBF7D0",borderRadius:8,padding:"14px 16px",marginBottom:14}}>
@@ -569,22 +622,6 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
               {form.brokerDeal&&<div className="fg"><label className="form-label">Broker Name</label><NoFillInput className="form-input" value={form.brokerName||""} onChange={f("brokerName")}/></div>}
               {form.brokerDeal&&<div className="fg"><label className="form-label">Broker Email</label><NoFillInput className="form-input" value={form.brokerEmail||""} onChange={f("brokerEmail")}/></div>}
               {form.brokerDeal&&<div className="fg"><label className="form-label">Broker Phone</label><NoFillInput className="form-input" value={form.brokerPhone||""} onChange={f("brokerPhone")}/></div>}
-            </div>
-          </div>
-          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:8,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📊 Pipeline Status</div>
-            <div className="form-grid">
-              <div className="fg"><label className="form-label">Status</label><select className="form-select" value={form.status} onChange={handleStatusChange}>{["Active","Closed","Dead","Paused"].map(s=><option key={s}>{s}</option>)}</select></div>
-              <div className="fg"><label className="form-label">Stage</label><select className="form-select" value={form.stage} onChange={handleStageChange}>{STAGES.map(s=><option key={s}>{s}</option>)}</select></div>
-              <div className="fg"><label className="form-label">Date Added</label><NoFillInput className="form-input" type="date" value={form.dateAdded} onChange={f("dateAdded")}/></div>
-              <div className="fg"><label className="form-label">Last Activity</label><NoFillInput className="form-input" type="date" value={form.lastActivityDate} onChange={f("lastActivityDate")}/></div>
-              <div className="fg"><label className="form-label">Est. Close Date</label><NoFillInput className="form-input" type="date" value={form.estimatedCloseDate} onChange={f("estimatedCloseDate")}/></div>
-              <div className="fg"><label className="form-label">Close Probability %</label><PctInput value={form.closeProbabilityPct} onChange={f("closeProbabilityPct")} placeholder="50.0"/></div>
-              <div className="fg"><label className="form-label">LOI Submitted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiSubmitted?"on":""}`} onClick={()=>tog("loiSubmitted")}/><span style={{fontSize:13}}>{form.loiSubmitted?"Yes":"No"}</span></div></div>
-              <div className="fg"><label className="form-label">LOI Accepted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiAccepted?"on":""}`} onClick={()=>tog("loiAccepted")}/><span style={{fontSize:13}}>{form.loiAccepted?"Yes":"No"}</span></div></div>
-              {form.loiAccepted&&<div className="fg"><label className="form-label">Exclusivity End Date</label><NoFillInput className="form-input" type="date" value={form.exclusivityEndDate} onChange={f("exclusivityEndDate")}/></div>}
-              {form.status==="Dead"&&<div className="fg"><label className="form-label">Dead Reason</label><select className="form-select" value={form.deadReason} onChange={f("deadReason")}><option value="">Select…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select></div>}
-              {form.status==="Closed"&&<div className="fg"><label className="form-label">Close Outcome</label><select className="form-select" value={form.closeOutcome} onChange={f("closeOutcome")}><option value="">Select…</option>{["Acquired","Lost to Another Buyer","Withdrawn"].map(o=><option key={o}>{o}</option>)}</select></div>}
             </div>
           </div>
           <div style={{background:"#FDF4FF",border:"1px solid #E9D5FF",borderRadius:8,padding:"14px 16px",marginBottom:14}}>
@@ -675,8 +712,8 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
           <div className="form-grid">
             <div className="fg"><label className="form-label">Deal Verdict</label><select className="form-select" value={form.dealVerdict} onChange={f("dealVerdict")}><option value="">Select…</option>{VERDICTS.map(v=><option key={v}>{v}</option>)}</select></div>
             <div className="fg"><label className="form-label">Close Probability %</label><PctInput value={form.closeProbabilityPct} onChange={f("closeProbabilityPct")}/></div>
-            {form.status==="Dead"&&<div className="fg"><label className="form-label">Dead Reason</label><select className="form-select" value={form.deadReason} onChange={f("deadReason")}><option value="">Select…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select></div>}
-            {form.status==="Closed"&&<div className="fg"><label className="form-label">Close Outcome</label><select className="form-select" value={form.closeOutcome} onChange={f("closeOutcome")}><option value="">Select…</option>{["Acquired","Lost to Another Buyer","Withdrawn"].map(o=><option key={o}>{o}</option>)}</select></div>}
+            {form.status==="Closed/Lost"&&<div className="fg"><label className="form-label">Dead Reason</label><select className="form-select" value={form.deadReason} onChange={f("deadReason")}><option value="">Select…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select></div>}
+            {form.status==="Closed/Won"&&<div className="fg"><label className="form-label">Close Outcome</label><select className="form-select" value={form.closeOutcome} onChange={f("closeOutcome")}><option value="">Select…</option>{["Acquired","Lost to Another Buyer","Withdrawn"].map(o=><option key={o}>{o}</option>)}</select></div>}
             <div className="fg full"><label className="form-label">Decision Rationale</label><textarea className="form-textarea" value={form.decisionRationale} onChange={f("decisionRationale")}/></div>
           </div>
         </div>}
@@ -962,7 +999,7 @@ function Dashboard({deals,contacts,meetings,tasks,buyBox,setSection,isAdmin}){
       <div className="kpi-card accent-red"><div className="kpi-label">Need Action</div><div className="kpi-value danger">{overdueDue.length+stale14.length+stale30.length}</div><div className="kpi-sub">{overdueDue.length} overdue · {stale30.length} stale 30d</div></div>
       <div className="kpi-card accent-amber"><div className="kpi-label">Median Multiple</div><div className="kpi-value">{medEbitda?medEbitda.toFixed(1)+"x":"—"}</div><div className="kpi-sub">EBITDA · {apEbitdas.length} deals</div></div>
     </div>
-    {alerts.length>0&&<div className="card" style={{marginBottom:14}}><div className="card-title"><Ic.Alert/> Alerts <Badge color="red">{alerts.length}</Badge></div>{alerts.slice(0,8).map((a,i)=><div key={i} className={`alert-item alert-${a.level}`} onClick={()=>setSection("pipeline")}><span style={{flex:1}}>{a.msg}</span><span style={{fontSize:10,opacity:0.7,textTransform:"uppercase",fontWeight:700}}>{a.level}</span></div>)}</div>}
+    {alerts.length>0&&<div className="card" style={{marginBottom:14}}><div className="card-title"><span style={{width:16,height:16,display:"inline-flex",flexShrink:0}}><Ic.Alert/></span> Alerts <Badge color="red">{alerts.length}</Badge></div>{alerts.slice(0,8).map((a,i)=><div key={i} className={`alert-item alert-${a.level}`} onClick={()=>setSection("pipeline")}><span style={{flex:1}}>{a.msg}</span><span style={{fontSize:10,opacity:0.7,textTransform:"uppercase",fontWeight:700}}>{a.level}</span></div>)}</div>}
     <div className="dash-row dash-row-2">
       <div className="card"><div className="card-title">📋 Deals Needing Action</div>
         {[...overdueDue.map(d=>({d,label:"Overdue",color:"#dc2626"})),...stale30.map(d=>({d,label:"30d inactive",color:"#d97706"})),...stale14.map(d=>({d,label:"14d inactive",color:"#d97706"})),...dueToday.map(d=>({d,label:"Due today",color:"#2563eb"}))].slice(0,7).map(({d,label,color},i)=>(
@@ -1014,33 +1051,92 @@ function Dashboard({deals,contacts,meetings,tasks,buyBox,setSection,isAdmin}){
    PIPELINE
 ═══════════════════════════════════════════════════════════════ */
 const SAVED_VIEWS=[
-  {id:"all",label:"All Active",filter:d=>d.status==="Active"},
+  {id:"all",label:"All Deals",filter:d=>true},
   {id:"action",label:"Needs Action",filter:d=>{const t=todayStr();return d.status==="Active"&&((d.nextStepDueDate&&d.nextStepDueDate<t)||(d.lastActivityDate&&daysSince(d.lastActivityDate)>=14));}},
   {id:"stale",label:"Stale",filter:d=>d.status==="Active"&&d.lastActivityDate&&daysSince(d.lastActivityDate)>=30},
-  {id:"loi",label:"Under LOI",filter:d=>d.loiSubmitted&&!["Dead","Closed"].includes(d.status)},
+  {id:"loi",label:"Under LOI",filter:d=>d.loiSubmitted&&!["Closed/Lost","Closed/Won"].includes(d.status)},
   {id:"dd",label:"Due Diligence",filter:d=>d.stage==="Due Diligence"},
-  {id:"financing",label:"Financing",filter:d=>d.stage==="Financing"},
-  {id:"dead",label:"Dead Deals",filter:d=>d.status==="Dead"},
-  {id:"closed",label:"Closed",filter:d=>d.status==="Closed"},
+  {id:"dead",label:"Closed/Lost",filter:d=>d.status==="Closed/Lost"||d.stage==="Closed/Lost"||d.status==="Dead"||d.stage==="Dead"},
+  {id:"won",label:"Closed/Won",filter:d=>d.status==="Closed/Won"||d.stage==="Closed/Won"||d.status==="Closed"||d.stage==="Closed"},
+  {id:"stalled",label:"Stalled",filter:d=>d.stage==="Stalled"},
 ];
 
 function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTasks,tasks,buyBox,users,isAdmin,currentUser}){
-  const[view,setView]=useState("table");const[modal,setModal]=useState(null);const[confirm,setConfirm]=useState(null);
-  const[search,setSearch]=useState("");const[stageF,setStageF]=useState("All");const[statusF,setStatusF]=useState("Active");const[sourceF,setSourceF]=useState("All");
+  const[view,setView]=useState("kanban");const[modal,setModal]=useState(null);const[confirm,setConfirm]=useState(null);
+  const[search,setSearch]=useState("");const[stageF,setStageF]=useState("All");const[statusF,setStatusF]=useState("All");const[sourceF,setSourceF]=useState("All");const[ownerF,setOwnerF]=useState("All");
   const[savedView,setSavedView]=useState("all");const[sortKey,setSortKey]=useState("dateAdded");const[sortDir,setSortDir]=useState(-1);
   const[taskPrefill,setTaskPrefill]=useState(null);
+  const[jsonImportOpen,setJsonImportOpen]=useState(false);
+  const[jsonImportText,setJsonImportText]=useState("");
+  const[jsonImportStatus,setJsonImportStatus]=useState(null);
+  const[deadReasonModal,setDeadReasonModal]=useState(null);
+  const[deadReasonVal,setDeadReasonVal]=useState("");
+  const[closedReasonModal,setClosedReasonModal]=useState(null);
+  const[closedReasonVal,setClosedReasonVal]=useState("");
 
   useEffect(()=>{
     const openId=localStorage.getItem("bba_import_open");
     if(openId){localStorage.removeItem("bba_import_open");const found=deals.find(d=>d.id===openId);if(found)setModal(found);}
   },[]);
 
+  const doJsonImport=async()=>{
+    setJsonImportStatus(null);
+    let data;
+    try{
+      // strip markdown code fences if Claude wrapped it
+      const cleaned=jsonImportText.trim().replace(/^```json?\s*/i,"").replace(/```\s*$/,"").trim();
+      data=JSON.parse(cleaned);
+    }catch(e){setJsonImportStatus({ok:false,msg:`Invalid JSON: ${e.message}`});return;}
+    if(!data.companyName){setJsonImportStatus({ok:false,msg:"Missing required field: companyName"});return;}
+    const now=todayStr();
+    const CLAUDE_FIELDS=["askingPrice","annualRevenue","grossProfit","ebitdaReported","sdeReported","sellerSalary","inventoryIncluded","realEstateIncluded","workingCapitalIncluded","addBacksTotal","normalizedEbitda","normalizedSde","recurringRevenuePct","topCustomerPct","customerConcentrationPct","capexIntensityPct","debtAmount","interestRatePercent","amortizationMonths","estimatedDownPayment","estimatedSellerNotePct","estimatedClosingCosts","estimatedWorkingCapitalNeed","overallDealScore","industryAttractivenessScore","recurringRevenueScore","customerConcentrationRiskScore","sellerDependenceScore","managementTeamScore","revenueTrendScore","marginQualityScore","capexRiskScore","financingFitScore","strategicFitScore","transitionRiskScore","redFlagCount","redFlagSummary","dealVerdict","decisionRationale","closeProbabilityPct","industry","businessModel","geographyState","geographyCity","leadSource","brokerDeal","brokerName","brokerEmail","brokerPhone","listingUrl","companyWebsite","contactName","contactTitle","contactEmail","contactPhone"];
+    // stamp analysis date
+    const d2=new Date();const mm=String(d2.getMonth()+1).padStart(2,"0");const dy=String(d2.getDate()).padStart(2,"0");const y=d2.getFullYear();
+    const stampedAnalysis=data.claudeAnalysis?`[Analysis imported ${mm}/${dy}/${y}]\n\n${data.claudeAnalysis}`:null;
+    // check for existing deal by name
+    const existingIdx=deals.findIndex(d=>d.companyName.trim().toLowerCase()===data.companyName.trim().toLowerCase());
+    try{
+      let targetDeal;
+      if(existingIdx>=0){
+        // FULL overwrite — merge all incoming fields onto existing, preserving only what's not in the JSON
+        const existing=deals[existingIdx];
+        // Fields that Claude should never overwrite (user's manual pipeline management)
+        const PRESERVE_FIELDS=["stage","status","notes","loiSubmitted","loiAccepted","loiSubmittedDate","loiAcceptedDate","exclusivityEndDate","deadDate","closedDate","deadReason","closeOutcome","diligenceStatus","customValues","assignees",...DILIGENCE_FIELDS];
+        const merged={...existing};
+        // Apply every field from the incoming JSON except preserved ones
+        Object.keys(data).forEach(k=>{
+          if(!PRESERVE_FIELDS.includes(k))merged[k]=data[k];
+        });
+        if(stampedAnalysis)merged.claudeAnalysis=stampedAnalysis;
+        targetDeal={...merged,updatedAt:now,lastActivityDate:now};
+        DILIGENCE_FIELDS.forEach(f=>{if(!(f in targetDeal))targetDeal[f]=false;});
+        await DB.upsertDeal(objToRow(targetDeal));
+        setDeals(p=>p.map(d=>d.id===existing.id?targetDeal:d));
+        setJsonImportStatus({ok:true,msg:`🔄 Deal updated: ${targetDeal.companyName}`,id:existing.id});
+      }else{
+        // create new
+        targetDeal={...DEAL_DEFAULTS,...data,...(stampedAnalysis?{claudeAnalysis:stampedAnalysis}:{}),id:data.id||genId("LD"),dateAdded:now,lastActivityDate:now,stageEntryDate:now,createdAt:now,updatedAt:now,customValues:{},assignees:[]};
+        DILIGENCE_FIELDS.forEach(f=>{if(!(f in targetDeal))targetDeal[f]=false;});
+        await DB.upsertDeal(objToRow(targetDeal));
+        setDeals(p=>[...p,targetDeal]);
+        setJsonImportStatus({ok:true,msg:`✅ Deal created: ${targetDeal.companyName}`,id:targetDeal.id});
+      }
+      setJsonImportText("");
+      // auto-close and auto-open the deal after brief delay
+      setTimeout(()=>{
+        setJsonImportOpen(false);
+        setJsonImportStatus(null);
+        localStorage.setItem("bba_import_open",targetDeal.id);
+      },900);
+    }catch(e){setJsonImportStatus({ok:false,msg:`Save failed: ${e.message}`});}
+  };
+
   const doSave=async form=>{
     const{_isNew,...clean}=form;const now=todayStr();
     if(clean.loiSubmitted&&!clean.loiSubmittedDate)clean.loiSubmittedDate=now;
     if(clean.loiAccepted&&!clean.loiAcceptedDate)clean.loiAcceptedDate=now;
-    if(clean.status==="Dead"&&!clean.deadDate)clean.deadDate=now;
-    if(clean.status==="Closed"&&!clean.closedDate)clean.closedDate=now;
+    if(clean.status==="Closed/Lost"&&!clean.deadDate)clean.deadDate=now;
+    if(clean.status==="Closed/Won"&&!clean.closedDate)clean.closedDate=now;
     if(clean.contactName||clean.contactEmail){
       const r=upsertContactList(contacts,{name:clean.contactName,title:clean.contactTitle,email:clean.contactEmail,phone:clean.contactPhone,company:clean.companyName});
       if(r.added||r.updated){
@@ -1060,19 +1156,84 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
       }else{
         const r={...modal,...clean,updatedAt:now};
         await DB.upsertDeal(objToRow(r));
-        setDeals(p=>p.map(d=>d.id===modal.id?r:d));toast("Deal updated","success");
+        setDeals(p=>p.map(d=>d.id===modal.id?r:d));
+        if(r.status==="Closed/Won")await autoCompleteDealTasks(r.companyName);
+        toast("Deal updated","success");
       }
       setModal(null);
     }catch(e){toast("Save failed: "+e.message,"error");}
   };
   const doDel=async id=>{
-    try{await DB.deleteDeal(id);setDeals(p=>p.filter(d=>d.id!==id));try{localStorage.removeItem(`bba_files_${id}`);}catch{}toast("Deal deleted","success");setConfirm(null);setModal(null);}
+    try{
+      // soft-delete: store in recycle bin before deleting
+      const deal=deals.find(d=>d.id===id);
+      if(deal){
+        const bin=JSON.parse(localStorage.getItem("bba_recycle_bin")||"[]");
+        bin.unshift({...deal,_deletedAt:new Date().toISOString()});
+        localStorage.setItem("bba_recycle_bin",JSON.stringify(bin.slice(0,50)));// keep last 50
+      }
+      await DB.deleteDeal(id);setDeals(p=>p.filter(d=>d.id!==id));
+      try{localStorage.removeItem(`bba_files_${id}`);}catch{}
+      toast("Deal deleted (recoverable from Recycle Bin in Settings)","success");
+      setConfirm(null);setModal(null);
+    }
     catch(e){toast("Delete failed: "+e.message,"error");}
   };
   const move=async(id,stage)=>{
     const deal=deals.find(d=>d.id===id);if(!deal)return;
-    const upd={...deal,stage,stageEntryDate:todayStr(),...(stage==="Dead"?{status:"Dead",deadDate:todayStr()}:{})};
-    try{await DB.upsertDeal(objToRow(upd));setDeals(p=>p.map(d=>d.id===id?upd:d));}catch(e){toast("Update failed","error");}
+    if(stage==="Closed/Lost"){
+      setDeadReasonVal("");
+      setDeadReasonModal({dealId:id,deal});
+      return;
+    }
+    if(stage==="Closed/Won"){
+      setClosedReasonVal("");
+      setClosedReasonModal({dealId:id,deal});
+      return;
+    }
+    const upd={...deal,stage,stageEntryDate:todayStr()};
+    // update UI immediately (optimistic) so deal moves instantly in kanban
+    setDeals(p=>p.map(d=>d.id===id?upd:d));
+    try{await DB.upsertDeal(objToRow(upd));}
+    catch(e){
+      // revert on failure
+      setDeals(p=>p.map(d=>d.id===id?deal:d));
+      toast("Update failed — deal moved back","error");
+    }
+  };
+  const confirmDeadMove=async()=>{
+    if(!deadReasonModal)return;
+    const{dealId,deal}=deadReasonModal;
+    const upd={...deal,stage:"Closed/Lost",status:"Closed/Lost",stageEntryDate:todayStr(),deadDate:todayStr(),deadReason:deadReasonVal||""};
+    try{
+      await DB.upsertDeal(objToRow(upd));
+      setDeals(p=>p.map(d=>d.id===dealId?upd:d));
+      await autoCompleteDealTasks(deal.companyName);
+      toast("Deal marked as Closed/Lost","success");
+    }catch(e){toast("Update failed","error");}
+    setDeadReasonModal(null);setDeadReasonVal("");
+  };
+  const autoCompleteDealTasks=async(dealName)=>{
+    const dealTasks=tasks.filter(t=>t.status!=="Completed"&&t.relatedDeal===dealName);
+    if(!dealTasks.length)return;
+    const updated=dealTasks.map(t=>({...t,status:"Completed"}));
+    try{
+      for(const t of updated)await DB.upsertTask(objToRow(t));
+      setTasks(p=>p.map(t=>{const u=updated.find(x=>x.id===t.id);return u||t;}));
+      toast(`${updated.length} task${updated.length>1?"s":""} marked complete`,"success");
+    }catch(e){console.warn("Task auto-complete failed:",e);}
+  };
+  const confirmClosedMove=async()=>{
+    if(!closedReasonModal)return;
+    const{dealId,deal}=closedReasonModal;
+    const upd={...deal,stage:"Closed/Won",status:"Closed/Won",stageEntryDate:todayStr(),closedDate:todayStr(),closeOutcome:closedReasonVal||""};
+    try{
+      await DB.upsertDeal(objToRow(upd));
+      setDeals(p=>p.map(d=>d.id===dealId?upd:d));
+      await autoCompleteDealTasks(deal.companyName);
+      toast("Deal marked as Closed","success");
+    }catch(e){toast("Update failed","error");}
+    setClosedReasonModal(null);setClosedReasonVal("");
   };
   const handleAddTask=dealForm=>{setModal(null);setTaskPrefill({relatedDeal:dealForm.companyName||"",company:dealForm.companyName||"",relatedContact:dealForm.contactName||"",_prefill:true});};
   const saveTask=async form=>{
@@ -1081,11 +1242,37 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
       const r=upsertContactList(contacts,{name:clean.relatedContact,email:clean.contactEmail,phone:clean.contactPhone,company:clean.company});
       if(r.added){try{await DB.upsertContact(objToRow(r.obj));setContacts(r.contacts);toast(`Contact "${r.name}" added`,"success");}catch(e){}}
     }
-    const t={...clean,id:genId("TK")};
-    try{await DB.upsertTask(objToRow(t));setTasks(p=>[...p,t]);toast("Task added","success");setTaskPrefill(null);}
-    catch(e){toast("Task save failed: "+e.message,"error");}
+    // if task has an id that already exists, update it — never duplicate
+    const existingTask=clean.id?tasks.find(t=>t.id===clean.id):null;
+    try{
+      if(existingTask){
+        const n={...existingTask,...clean};
+        await DB.upsertTask(objToRow(n));setTasks(p=>p.map(t=>t.id===n.id?n:t));toast("Task updated","success");
+      }else{
+        const t={...clean,id:genId("TK")};
+        await DB.upsertTask(objToRow(t));setTasks(p=>[...p,t]);toast("Task added","success");
+      }
+      setTaskPrefill(null);
+    }catch(e){toast("Task save failed: "+e.message,"error");}
   };
   const handleSort=key=>{if(sortKey===key)setSortDir(d=>d*-1);else{setSortKey(key);setSortDir(-1);}};
+  const[pipeColF,setPipeColF]=useState({companyName:"",industry:"",leadSource:""});
+  const PipeSortTh=({label,k,filterable})=>(
+    <th style={{cursor:"pointer",userSelect:"none"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:3}}>
+        <span onClick={()=>handleSort(k)}>{label}{sortKey===k?sortDir>0?" ↑":" ↓":""}</span>
+        {filterable&&<input
+          type="text"
+          style={{fontSize:11,padding:"2px 5px",height:22,fontWeight:400,border:"1px solid var(--border)",borderRadius:4,width:"100%",fontFamily:"DM Sans,sans-serif"}}
+          placeholder="Filter…"
+          value={pipeColF[k]||""}
+          onClick={e=>e.stopPropagation()}
+          onChange={e=>{const v=e.target.value;setPipeColF(p=>({...p,[k]:v}));}}
+          onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")e.preventDefault();}}
+        />}
+      </div>
+    </th>
+  );
   const svFilter=SAVED_VIEWS.find(v=>v.id===savedView)?.filter||(d=>true);
   const cDeals=deals.map(computeDeal);
   let filtered=cDeals.filter(svFilter).filter(d=>{
@@ -1093,9 +1280,12 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
     const mQ=!q||[d.companyName,d.industry,d.leadSource,d.brokerName,d.geographyState].join(" ").toLowerCase().includes(q);
     const stageOk=stageF==="All"||d.stage===stageF;
     const sourceOk=sourceF==="All"||d.leadSource===sourceF;
-    // only apply the status dropdown on the "all" view — all other saved views handle their own status filtering
-    const statusOk=savedView!=="all"||(statusF==="All"||d.status===statusF);
-    return mQ&&stageOk&&sourceOk&&statusOk;
+    const statusOk=statusF==="All"||d.status===statusF;
+    const ownerOk=ownerF==="All"||(d.assignees||[]).includes(ownerF);
+    const colCoOk=!pipeColF.companyName||((d.companyName||"").toLowerCase().includes(pipeColF.companyName.toLowerCase()));
+    const colIndOk=!pipeColF.industry||((d.industry||"").toLowerCase().includes(pipeColF.industry.toLowerCase()));
+    const colSrcOk=!pipeColF.leadSource||((d.leadSource||"").toLowerCase().includes(pipeColF.leadSource.toLowerCase()));
+    return mQ&&stageOk&&sourceOk&&statusOk&&ownerOk&&colCoOk&&colIndOk&&colSrcOk;
   });
   filtered=[...filtered].sort((a,b)=>{const av=a[sortKey]||"";const bv=b[sortKey]||"";if(!isNaN(parseFloat(av)))return(parseFloat(av)-parseFloat(bv))*sortDir;return String(av).localeCompare(String(bv))*sortDir;});
   const isNew=modal==="add"||modal?._isNew;
@@ -1116,15 +1306,28 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
 
   return(<div>
     <div className="saved-views">{SAVED_VIEWS.map(v=><div key={v.id} className={`view-chip ${savedView===v.id?"active":""}`} onClick={()=>setSavedView(v.id)}>{v.label}</div>)}</div>
-    <div className="stage-tiles">{STAGES.map(s=>{const sl=deals.filter(d=>d.stage===s&&d.status==="Active");const tot=sl.reduce((x,d)=>x+(parseFloat(d.askingPrice)||0),0);return(<div key={s} className="stage-tile"><div className="stage-tile-lbl">{s}</div><div className="stage-tile-cnt">{sl.length}</div><div className="stage-tile-val">{fmt$Short(tot)}</div></div>);})}</div>
+    <div className="stage-tiles">{STAGES.map(s=>{
+      const sl=s==="Closed/Won"
+        ?deals.filter(d=>d.stage==="Closed/Won"||d.status==="Closed/Won"||d.stage==="Closed"||d.status==="Closed")
+        :s==="Closed/Lost"
+        ?deals.filter(d=>d.stage==="Closed/Lost"||d.status==="Closed/Lost"||d.stage==="Dead"||d.status==="Dead")
+        :deals.filter(d=>d.stage===s);
+      const tot=sl.reduce((x,d)=>x+(parseFloat(d.askingPrice)||0),0);
+      return(<div key={s} className="stage-tile"><div className="stage-tile-lbl">{s}</div><div className="stage-tile-cnt">{sl.length}</div><div className="stage-tile-val">{fmt$Short(tot)}</div></div>);
+    })}</div>
     <div className="search-bar">
-      <div className="search-wrap"><SearchBox className="inp" placeholder="Search deals…" value={search} onChange={v=>setSearch(v)}/></div>
+      <div style={{width:200,flexShrink:0}}><SearchBox className="inp" placeholder="Search deals…" value={search} onChange={v=>setSearch(v)}/></div>
       <select className="fsel" value={stageF} onChange={e=>setStageF(e.target.value)}><option value="All">All Stages</option>{STAGES.map(s=><option key={s}>{s}</option>)}</select>
-      <select className="fsel" value={statusF} onChange={e=>setStatusF(e.target.value)}><option value="All">All Status</option>{["Active","Closed","Dead","Paused"].map(s=><option key={s}>{s}</option>)}</select>
+      <select className="fsel" value={statusF} onChange={e=>setStatusF(e.target.value)}><option value="All">All Status</option>{["Active","Closed/Won","Closed/Lost","Stalled","Paused","Dead","Closed"].map(s=><option key={s}>{s}</option>)}</select>
       <select className="fsel" value={sourceF} onChange={e=>setSourceF(e.target.value)}><option value="All">All Sources</option>{LEAD_SOURCES.map(s=><option key={s}>{s}</option>)}</select>
+      <select className="fsel" value={ownerF} onChange={e=>setOwnerF(e.target.value)}>
+        <option value="All">All Owners</option>
+        {users.map(u=><option key={u.email} value={u.email}>{u.full_name}</option>)}
+      </select>
       <div style={{marginLeft:"auto",display:"flex",gap:6}}>
-        <button className={`btn ${view==="table"?"btn-primary":"btn-secondary"}`} onClick={()=>setView("table")} title="Table"><Ic.Table/></button>
-        <button className={`btn ${view==="kanban"?"btn-primary":"btn-secondary"}`} onClick={()=>setView("kanban")} title="Kanban"><Ic.Kanban/></button>
+        <button className={`btn ${view==="table"?"btn-primary":"btn-secondary"}`} onClick={()=>setView("table")} title="Table"><span style={{width:14,height:14,display:"inline-flex"}}><Ic.Table/></span> Table</button>
+        <button className={`btn ${view==="kanban"?"btn-primary":"btn-secondary"}`} onClick={()=>setView("kanban")} title="Kanban"><span style={{width:14,height:14,display:"inline-flex"}}><Ic.Kanban/></span> Kanban</button>
+        <button className="btn btn-secondary" style={{color:"#7C3AED",borderColor:"#C4B5FD"}} onClick={()=>{setJsonImportOpen(true);setJsonImportStatus(null);setJsonImportText("");}}>🤖 Import from Claude</button>
         <button className="btn btn-primary" onClick={()=>setModal("add")}><Ic.Plus/> Add Deal</button>
       </div>
     </div>
@@ -1132,7 +1335,7 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
       <div className="card" style={{padding:0}}>
         <div className="table-wrap">
           <table>
-            <thead><tr>{[["id","Deal ID"],["companyName","Company"],["stage","Stage"],["askingPrice","Asking"],["annualRevenue","Revenue"],["ebitdaReported","EBITDA"],["apToEbitda","x EBITDA"],["dscr","DSCR"],["overallDealScore","Score"],["financeabilityStatus","Fin."],["leadSource","Source"],["lastActivityDate","Last Activity"],["deadReason","Dead Reason"]].map(([k,lbl])=><th key={k} onClick={()=>handleSort(k)}>{lbl}{sortKey===k?sortDir>0?" ↑":" ↓":""}</th>)}<th>Actions</th></tr></thead>
+            <thead><tr>{[["id","Deal ID",false],["companyName","Company",true],["stage","Stage",false],["askingPrice","Asking",false],["annualRevenue","Revenue",false],["ebitdaReported","EBITDA",false],["apToEbitda","x EBITDA",false],["dscr","DSCR",false],["overallDealScore","Score",false],["financeabilityStatus","Fin.",false],["leadSource","Source",true],["lastActivityDate","Last Activity",false],["deadReason","Dead Reason",false]].map(([k,lbl,filterable])=><PipeSortTh key={k} label={lbl} k={k} filterable={filterable}/>)}<th>Actions</th></tr></thead>
             <tbody>
               {filtered.length===0?<tr><td colSpan="14" style={{textAlign:"center",padding:"40px",color:"var(--text-3)"}}>No deals match this view.</td></tr>
               :filtered.map(d=>(
@@ -1159,7 +1362,15 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
       </div>
     ):(
       <div className="kanban-wrap">
-        {STAGES.map(stage=>{const sl=filtered.filter(d=>d.stage===stage);return(
+        {STAGES.map(stage=>{
+          // For Closed/Won column: catch legacy "Closed" status too
+          // For Closed/Lost column: catch legacy "Dead" status too
+          const sl=stage==="Closed/Won"
+            ?filtered.filter(d=>d.stage==="Closed/Won"||d.status==="Closed/Won"||d.stage==="Closed"||d.status==="Closed")
+            :stage==="Closed/Lost"
+            ?filtered.filter(d=>d.stage==="Closed/Lost"||d.status==="Closed/Lost"||d.stage==="Dead"||d.status==="Dead")
+            :filtered.filter(d=>d.stage===stage);
+          return(
           <div key={stage} className="kanban-col" onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("drag-over");}} onDragLeave={e=>e.currentTarget.classList.remove("drag-over")} onDrop={e=>{e.currentTarget.classList.remove("drag-over");const id=e.dataTransfer.getData("id");if(id)move(id,stage);}}>
             <div className="kanban-col-hdr"><div><div className="kanban-col-title">{stage}</div><div className="kanban-col-meta">{sl.length} · {fmt$Short(sl.reduce((s,d)=>s+(parseFloat(d.askingPrice)||0),0))}</div></div></div>
             <div className="kanban-cards">{sl.map(d=>{const ts=getDealTaskStatus(d.id);const fls=hasFiles(d.id);const borderColor=ts==="none"?"#FCA5A5":ts==="overdue"?"#F15C2B":"var(--border)";const nameColor=ts==="none"?"#dc2626":ts==="overdue"?"#F15C2B":"var(--text)";return(<div key={d.id} className="kanban-card" draggable onDragStart={e=>e.dataTransfer.setData("id",d.id)} onClick={()=>setModal(d)} style={{borderColor}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:4}}><div className="kanban-card-co" style={{color:nameColor,flex:1}}>{d.companyName}</div>{fls&&<span title="Has files attached" style={{fontSize:12,flexShrink:0,color:"var(--text-3)"}}>📎</span>}</div><div className="kanban-card-sub">{d.leadSource||"—"} · {d.industry||"—"}</div>{d.overallDealScore&&<div style={{fontFamily:"DM Mono,monospace",fontSize:11,color:"var(--primary)",fontWeight:700}}>★ {d.overallDealScore}</div>}<div className="kanban-card-foot"><div className="kanban-card-val">{d.askingPrice?fmt$Short(d.askingPrice):"No price"}</div>{d.financeabilityStatus&&<span style={{fontSize:10,fontWeight:600,color:d.financeabilityStatus==="Financeable"?"#16a34a":d.financeabilityStatus==="Borderline"?"#d97706":"#dc2626"}}>{d.financeabilityStatus==="Financeable"?"✓":"~"}</span>}</div></div>);})}</div>
@@ -1167,9 +1378,70 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
         );})}
       </div>
     )}
-    {modal&&<DealForm deal={isNew?(modal==="add"?{...DEAL_DEFAULTS,_isNew:true}:modal):modal} customFields={customFields} onClose={()=>setModal(null)} onSave={doSave} onAddTask={handleAddTask} onDelete={id=>{if(window.confirm("Permanently delete this deal?"))doDel(id);}} tasks={tasks} onOpenTask={t=>{setModal(null);setTaskPrefill(t);}} users={users}/>}
+    {modal&&<DealForm deal={isNew?(modal==="add"?{...DEAL_DEFAULTS,_isNew:true}:modal):modal} customFields={customFields} onClose={()=>setModal(null)} onSave={doSave} onAddTask={handleAddTask} onDelete={id=>{if(window.confirm("Permanently delete this deal?"))doDel(id);}} tasks={tasks} onOpenTask={t=>{setModal(null);const{_prefill,...taskData}=t;setTaskPrefill({...taskData});}} users={users}/>}
     {taskPrefill&&<TaskForm task={taskPrefill} customFields={customFields} onClose={()=>setTaskPrefill(null)} onSave={saveTask} onCompleteAndNew={form=>{saveTask({...form,status:"Completed"});setTaskPrefill({owner:form.owner||"",relatedContact:form.relatedContact||"",contactEmail:form.contactEmail||"",contactPhone:form.contactPhone||"",company:form.company||"",relatedDeal:form.relatedDeal||"",status:"Open",title:"",taskType:"Follow-Up Call",dueDate:"",priority:"Medium",notes:"",customValues:{},_prefill:true});}} onOpenDeal={d=>{setTaskPrefill(null);setModal(d);}} contacts={contacts} deals={deals} users={users}/>}
     {confirm&&<Confirm msg="Delete this deal?" onConfirm={()=>doDel(confirm)} onCancel={()=>setConfirm(null)}/>}
+    {jsonImportOpen&&(
+      <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)e.preventDefault();}}>
+        <div className="modal" style={{maxWidth:620}}>
+          <div className="modal-hdr">
+            <div>
+              <div className="modal-title">🤖 Import from Claude</div>
+              <div style={{fontSize:12,color:"var(--text-3)",marginTop:2}}>Paste the JSON from your Claude analysis below. Works for new deals and updates to existing ones.</div>
+            </div>
+            <button className="btn btn-ghost btn-icon" onClick={()=>setJsonImportOpen(false)}><Ic.X/></button>
+          </div>
+          <div className="modal-body">
+            <div style={{background:"rgba(124,58,237,0.06)",border:"1px solid #C4B5FD",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12.5,color:"#5B21B6",lineHeight:1.65}}>
+              In your Claude Project, after a business analysis, ask: <strong>"Give me the deal JSON for my CRM."</strong> Claude will output a JSON block. Copy the entire block (including the curly braces) and paste it here.
+            </div>
+            <textarea
+              className="form-textarea"
+              value={jsonImportText}
+              onChange={e=>setJsonImportText(e.target.value)}
+              placeholder={'{\n  "companyName": "Acme Plumbing",\n  "askingPrice": 1500000,\n  "annualRevenue": 3200000,\n  ...\n}'}
+              style={{minHeight:220,fontFamily:"DM Mono,monospace",fontSize:12,lineHeight:1.6}}
+            />
+            {jsonImportStatus&&(
+              <div style={{marginTop:10,padding:"10px 14px",borderRadius:7,fontSize:13,fontWeight:500,background:jsonImportStatus.ok?"#f0fdf4":"#fef2f2",color:jsonImportStatus.ok?"#16a34a":"#dc2626",border:`1px solid ${jsonImportStatus.ok?"#bbf7d0":"#fecaca"}`}}>
+                {jsonImportStatus.msg}
+                {jsonImportStatus.ok&&jsonImportStatus.id&&<button className="btn btn-success btn-sm" style={{marginLeft:12}} onClick={()=>{setJsonImportOpen(false);const found=deals.find(d=>d.id===jsonImportStatus.id);if(found)setModal(found);}}>Open Deal →</button>}
+              </div>
+            )}
+          </div>
+          <div className="modal-ftr">
+            <button className="btn btn-secondary" onClick={()=>setJsonImportOpen(false)}>Close</button>
+            <button className="btn btn-primary" style={{background:"#7C3AED"}} onClick={doJsonImport} disabled={!jsonImportText.trim()}>Import Deal</button>
+          </div>
+        </div>
+      </div>
+    )}
+    {deadReasonModal&&(
+      <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)e.preventDefault();}}>
+        <div className="modal" style={{maxWidth:440}}>
+          <div className="modal-hdr"><div className="modal-title">Why is this deal Closed/Lost?</div><button className="btn btn-ghost btn-icon" onClick={()=>setDeadReasonModal(null)}><Ic.X/></button></div>
+          <div className="modal-body">
+            <div style={{marginBottom:12,fontSize:13,color:"var(--text-2)"}}><strong>{deadReasonModal.deal?.companyName}</strong> will be marked as Closed/Lost. Please select a reason:</div>
+            <select className="form-select" value={deadReasonVal} onChange={e=>setDeadReasonVal(e.target.value)} style={{marginBottom:8}}><option value="">Select a reason…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select>
+            <div style={{marginTop:10,fontSize:12,color:"var(--text-3)"}}>⚡ All open tasks associated with this deal will be automatically marked as complete.</div>
+          </div>
+          <div className="modal-ftr"><button className="btn btn-secondary" onClick={()=>setDeadReasonModal(null)}>Cancel</button><button className="btn btn-danger" onClick={confirmDeadMove}>Mark as Closed/Lost</button></div>
+        </div>
+      </div>
+    )}
+    {closedReasonModal&&(
+      <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)e.preventDefault();}}>
+        <div className="modal" style={{maxWidth:440}}>
+          <div className="modal-hdr"><div className="modal-title">How was this deal closed?</div><button className="btn btn-ghost btn-icon" onClick={()=>setClosedReasonModal(null)}><Ic.X/></button></div>
+          <div className="modal-body">
+            <div style={{marginBottom:12,fontSize:13,color:"var(--text-2)"}}><strong>{closedReasonModal.deal?.companyName}</strong> will be marked as Closed. Please select an outcome:</div>
+            <select className="form-select" value={closedReasonVal} onChange={e=>setClosedReasonVal(e.target.value)} style={{marginBottom:8}}><option value="">Select an outcome…</option>{["Acquired","Lost to Another Buyer","Withdrawn"].map(o=><option key={o}>{o}</option>)}</select>
+            <div style={{marginTop:10,fontSize:12,color:"var(--text-3)"}}>⚡ All open tasks associated with this deal will be automatically marked as complete.</div>
+          </div>
+          <div className="modal-ftr"><button className="btn btn-secondary" onClick={()=>setClosedReasonModal(null)}>Cancel</button><button className="btn btn-success" onClick={confirmClosedMove}>Mark as Closed</button></div>
+        </div>
+      </div>
+    )}
   </div>);
 }
 
@@ -1178,7 +1450,7 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
 ═══════════════════════════════════════════════════════════════ */
 const CT_TYPES=["Client","Prospect","Partner","Referral","Vendor","Alumni","Other"];
 const CT_STATUSES=["Active","Warm","Cold","Unqualified","Archived"];
-function ContactForm({contact,customFields,onClose,onSave,users}){
+function ContactForm({contact,customFields,onClose,onSave,users,onAddTask,onDelete}){
   const def={firstName:"",lastName:"",company:"",title:"",email:"",phone:"",contactType:"Prospect",source:"",status:"Active",owner:"",lastContacted:"",notes:"",customValues:{},assignees:[]};
   const[form,setForm]=useState({...def,...contact,customValues:{...(contact?.customValues||{})},assignees:contact?.assignees||[]});
   const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));const setCF=(id,val)=>setForm(p=>({...p,customValues:{...p.customValues,[id]:val}}));
@@ -1198,23 +1470,95 @@ function ContactForm({contact,customFields,onClose,onSave,users}){
       <div className="fg"><label className="form-label">Assignees</label><MultiSelect values={form.assignees||[]} onChange={v=>setForm(p=>({...p,assignees:v}))} users={users}/></div>
       <div className="fg full"><label className="form-label">Notes</label><textarea className="form-textarea" value={form.notes} onChange={f("notes")}/></div>
     </div><CustomFieldInputs entityType="Contacts" customFields={customFields} values={form.customValues} onChange={setCF}/></div>
-    <div className="modal-ftr"><button className="btn btn-secondary" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={()=>{if(!form.firstName||!form.lastName)return alert("Name required.");onSave(form);}}>Save</button></div>
+    <div className="modal-ftr">
+      {onDelete&&contact&&<button className="btn btn-danger" onClick={()=>onDelete(form.id)}><Ic.Trash/> Delete Contact</button>}
+      {onAddTask&&<button className="btn btn-secondary" onClick={()=>{if(!form.firstName||!form.lastName)return alert("Name required.");onSave(form);onAddTask(form);}}><Ic.Plus/> Save &amp; Add Task</button>}
+      <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={()=>{if(!form.firstName||!form.lastName)return alert("Name required.");onSave(form);}}>Save</button>
+      </div>
+    </div>
   </div></div>);
 }
 function Contacts({contacts,setContacts,deals,customFields,toast,setSection,users,isAdmin,currentUser}){
   const[search,setSearch]=useState("");const[typeF,setTypeF]=useState("All");const[statF,setStatF]=useState("All");
   const[modal,setModal]=useState(null);const[confirm,setConfirm]=useState(null);
   const[sortKey,setSortKey]=useState("firstName");const[sortDir,setSortDir]=useState(1);
+  const[showDedupPanel,setShowDedupPanel]=useState(false);
+  const[dedupConfirm,setDedupConfirm]=useState(null);
   const handleSort=key=>{if(sortKey===key)setSortDir(d=>d*-1);else{setSortKey(key);setSortDir(1);}};
-  const SortTh=({label,k,style})=><th style={style} onClick={()=>handleSort(k)}>{label}{sortKey===k?sortDir>0?" ↑":" ↓":""}</th>;
-  const filtered=contacts.filter(c=>{const q=search.toLowerCase();return(!q||[c.firstName,c.lastName,c.company,c.email,c.phone].join(" ").toLowerCase().includes(q))&&(typeF==="All"||c.contactType===typeF)&&(statF==="All"||c.status===statF);});
+  const[colF,setColF]=useState({name:"",company:"",email:""});
+  const SortTh=({label,k,filterable})=>(
+    <th style={{cursor:"pointer",userSelect:"none"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:3}}>
+        <span onClick={()=>handleSort(k)}>{label}{sortKey===k?sortDir>0?" ↑":" ↓":""}</span>
+        {filterable&&<input
+          type="text"
+          style={{fontSize:11,padding:"2px 5px",height:22,fontWeight:400,border:"1px solid var(--border)",borderRadius:4,width:"100%",fontFamily:"DM Sans,sans-serif"}}
+          placeholder="Filter…"
+          value={colF[k]||""}
+          onClick={e=>e.stopPropagation()}
+          onChange={e=>{const v=e.target.value;setColF(p=>({...p,[k]:v}));}}
+          onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")e.preventDefault();}}
+        />}
+      </div>
+    </th>
+  );
+
+  // find duplicate groups — by email (exact) or by full name (case-insensitive)
+  const findDuplicates=()=>{
+    const groups=[];const seen=new Set();
+    contacts.forEach(c=>{
+      if(seen.has(c.id))return;
+      const name=`${c.firstName} ${c.lastName}`.trim().toLowerCase();
+      const email=(c.email||"").trim().toLowerCase();
+      const matches=contacts.filter(o=>o.id!==c.id&&(
+        (email&&o.email&&o.email.trim().toLowerCase()===email)||
+        (name&&`${o.firstName} ${o.lastName}`.trim().toLowerCase()===name)
+      ));
+      if(matches.length>0){
+        const group=[c,...matches];group.forEach(g=>seen.add(g.id));
+        groups.push(group);
+      }
+    });
+    return groups;
+  };
+  const dupGroups=useMemo(()=>findDuplicates(),[contacts]);
+
+  const mergeContacts=async(keepId,dupeIds)=>{
+    const keep=contacts.find(c=>c.id===keepId);
+    const dupes=contacts.filter(c=>dupeIds.includes(c.id));
+    // merge: fill blank fields on keeper from dupes
+    const merged={...keep};
+    dupes.forEach(d=>{Object.keys(d).forEach(k=>{if(!merged[k]&&d[k])merged[k]=d[k];});});
+    try{
+      await DB.upsertContact(objToRow(merged));
+      for(const d of dupes)await DB.deleteContact(d.id);
+      const updated=contacts.filter(c=>!dupeIds.includes(c.id)).map(c=>c.id===keepId?merged:c);
+      setContacts(updated);
+      toast(`Merged ${dupes.length} duplicate${dupes.length>1?"s":""} into ${merged.firstName} ${merged.lastName}`,"success");
+      setDedupConfirm(null);
+    }catch(e){toast("Merge failed: "+e.message,"error");}
+  };
+
+  const filtered=contacts.filter(c=>{const q=search.toLowerCase();const mQ=!q||[c.firstName,c.lastName,c.company,c.email,c.phone].join(" ").toLowerCase().includes(q);const mType=typeF==="All"||c.contactType===typeF;const mStat=statF==="All"||c.status===statF;const mName=!colF.name||`${c.firstName} ${c.lastName}`.toLowerCase().includes(colF.name.toLowerCase());const mCo=!colF.company||((c.company||"").toLowerCase().includes(colF.company.toLowerCase()));const mEmail=!colF.email||((c.email||"").toLowerCase().includes(colF.email.toLowerCase()));return mQ&&mType&&mStat&&mName&&mCo&&mEmail;});
   const sorted=[...filtered].sort((a,b)=>{
     let av="",bv="";
     if(sortKey==="name"){av=`${a.firstName} ${a.lastName}`.toLowerCase();bv=`${b.firstName} ${b.lastName}`.toLowerCase();}
     else{av=(a[sortKey]||"").toLowerCase();bv=(b[sortKey]||"").toLowerCase();}
     return av<bv?-sortDir:av>bv?sortDir:0;
   });
+
   const doSave=async form=>{
+    // dedup check before saving: block if same name exists and no email to distinguish
+    const fullName=`${form.firstName} ${form.lastName}`.trim().toLowerCase();
+    const isNew=modal==="add";
+    if(isNew){
+      const nameMatch=contacts.find(c=>`${c.firstName} ${c.lastName}`.trim().toLowerCase()===fullName);
+      if(nameMatch&&!form.email&&!nameMatch.email){
+        if(!window.confirm(`A contact named "${form.firstName} ${form.lastName}" already exists with no email to distinguish them. Save anyway?`))return;
+      }
+    }
     try{
       if(modal==="add"){const n={...form,id:genId("CA")};await DB.upsertContact(objToRow(n));setContacts(p=>[...p,n]);toast("Contact added","success");}
       else{const n={...modal,...form};await DB.upsertContact(objToRow(n));setContacts(p=>p.map(c=>c.id===modal.id?n:c));toast("Contact updated","success");}
@@ -1223,16 +1567,66 @@ function Contacts({contacts,setContacts,deals,customFields,toast,setSection,user
   };
   const doDel=async id=>{try{await DB.deleteContact(id);setContacts(p=>p.filter(c=>c.id!==id));toast("Contact deleted","success");setConfirm(null);}catch(e){toast("Delete failed: "+e.message,"error");}};
   const createDeal=c=>{localStorage.setItem("bba_deal_prefill",JSON.stringify({companyName:c.company||"",contactName:`${c.firstName} ${c.lastName}`.trim(),contactTitle:c.title||"",contactEmail:c.email||"",contactPhone:c.phone||"",_prefill:true}));setSection("pipeline");toast("Opening deal form…","success");};
-  const createTask=c=>{localStorage.setItem("bba_task_prefill",JSON.stringify({relatedContact:`${c.firstName} ${c.lastName}`,company:c.company||"",_prefill:true}));localStorage.setItem("bba_nav_pending","tasks");setSection("tasks");};
+  const createTask=c=>{localStorage.setItem("bba_task_prefill",JSON.stringify({relatedContact:`${c.firstName} ${c.lastName}`,contactEmail:c.email||"",contactPhone:c.phone||"",company:c.company||"",_prefill:true}));localStorage.setItem("bba_nav_pending","tasks");setSection("tasks");};
+  const handleAddTaskFromContact=c=>{setModal(null);localStorage.setItem("bba_task_prefill",JSON.stringify({relatedContact:`${c.firstName} ${c.lastName}`,contactEmail:c.email||"",contactPhone:c.phone||"",company:c.company||"",_prefill:true}));localStorage.setItem("bba_nav_pending","tasks");setSection("tasks");};
   const SC={Active:"green",Warm:"amber",Cold:"blue",Unqualified:"gray",Archived:"gray"};
   return(<div>
+    {dupGroups.length>0&&(
+      <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:10,padding:"12px 18px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontSize:20}}>⚠️</span>
+        <div style={{flex:1,fontSize:13,color:"#92400E"}}>
+          <strong>{dupGroups.length} duplicate group{dupGroups.length>1?"s":""} found</strong> — contacts with the same name or email address.
+        </div>
+        <button className="btn btn-secondary btn-sm" style={{borderColor:"#D97706",color:"#92400E"}} onClick={()=>setShowDedupPanel(p=>!p)}>
+          {showDedupPanel?"Hide":"Review & Merge"}
+        </button>
+      </div>
+    )}
+    {showDedupPanel&&dupGroups.length>0&&(
+      <div className="card" style={{marginBottom:14,border:"1px solid #FDE68A",background:"#FFFBEB"}}>
+        <div className="card-title">🔀 Duplicate Contacts</div>
+        {dupGroups.map((group,gi)=>(
+          <div key={gi} style={{marginBottom:16,paddingBottom:16,borderBottom:"1px solid #FDE68A"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.4px"}}>Group {gi+1} — {group.length} matches</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
+              {group.map(c=>(
+                <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--white)",borderRadius:6,border:"1px solid var(--border)"}}>
+                  <div className="avatar" style={{background:avColor(`${c.firstName} ${c.lastName}`)}}>{initials(`${c.firstName} ${c.lastName}`)}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:13}}>{c.firstName} {c.lastName}</div>
+                    <div style={{fontSize:11,color:"var(--text-3)"}}>{c.email||"No email"} · {c.phone||"No phone"} · {c.company||"No company"}</div>
+                  </div>
+                  <button className="btn btn-success btn-sm" onClick={()=>setDedupConfirm({keepId:c.id,dupeIds:group.filter(x=>x.id!==c.id).map(x=>x.id),name:`${c.firstName} ${c.lastName}`})}>
+                    Keep This One
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {dedupConfirm&&(
+          <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)e.preventDefault();}}>
+            <div className="modal" style={{maxWidth:440}}>
+              <div className="modal-hdr"><div className="modal-title">Confirm Merge</div></div>
+              <div className="modal-body">
+                <p style={{fontSize:14,lineHeight:1.7}}>Keep <strong>{dedupConfirm.name}</strong> and delete {dedupConfirm.dupeIds.length} duplicate{dedupConfirm.dupeIds.length>1?"s":""}? Blank fields on the kept record will be filled in from the duplicates before they are deleted.</p>
+              </div>
+              <div className="modal-ftr">
+                <button className="btn btn-secondary" onClick={()=>setDedupConfirm(null)}>Cancel</button>
+                <button className="btn btn-danger" onClick={()=>mergeContacts(dedupConfirm.keepId,dedupConfirm.dupeIds)}>Merge & Delete Duplicates</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
     <div className="search-bar">
       <div className="search-wrap"><SearchBox className="inp" placeholder="Search contacts…" value={search} onChange={v=>setSearch(v)}/></div>
       <select className="fsel" value={typeF} onChange={e=>setTypeF(e.target.value)}><option value="All">All Types</option>{CT_TYPES.map(t=><option key={t}>{t}</option>)}</select>
       <select className="fsel" value={statF} onChange={e=>setStatF(e.target.value)}><option value="All">All Statuses</option>{CT_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
       <button className="btn btn-primary" onClick={()=>setModal("add")}><Ic.Plus/> Add Contact</button>
     </div>
-    <div className="card" style={{padding:0}}><div className="table-wrap"><table><thead><tr><SortTh label="Name" k="name"/><SortTh label="Company" k="company"/><SortTh label="Title" k="title"/><SortTh label="Email" k="email"/><th>Phone</th><SortTh label="Type" k="contactType"/><SortTh label="Status" k="status"/><SortTh label="Last Contacted" k="lastContacted"/><th>Actions</th></tr></thead>
+    <div className="card" style={{padding:0}}><div className="table-wrap"><table><thead><tr><SortTh label="Name" k="name" filterable/><SortTh label="Company" k="company" filterable/><SortTh label="Title" k="title"/><SortTh label="Email" k="email" filterable/><th>Phone</th><SortTh label="Type" k="contactType"/><SortTh label="Status" k="status"/><SortTh label="Last Contacted" k="lastContacted"/><th>Actions</th></tr></thead>
       <tbody>{sorted.length===0?<tr><td colSpan="9" style={{textAlign:"center",padding:"40px",color:"var(--text-3)"}}>No contacts found.</td></tr>:sorted.map(c=>(
         <tr key={c.id} onClick={()=>setModal(c)}>
           <td><div style={{display:"flex",alignItems:"center",gap:9}}><div className="avatar" style={{background:avColor(`${c.firstName} ${c.lastName}`)}}>{initials(`${c.firstName} ${c.lastName}`)}</div><div style={{fontWeight:600,fontSize:13}}>{c.firstName} {c.lastName}</div></div></td>
@@ -1242,7 +1636,7 @@ function Contacts({contacts,setContacts,deals,customFields,toast,setSection,user
           <td onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:5,flexWrap:"nowrap"}}><button className="btn btn-success btn-sm" onClick={()=>createDeal(c)}><Ic.Deal/> Deal</button><button className="btn btn-secondary btn-sm" onClick={()=>createTask(c)}><Ic.Tasks/> Task</button><button className="btn btn-ghost btn-icon btn-sm" style={{color:"#EF4444"}} onClick={()=>setConfirm(c.id)}><Ic.Trash/></button></div></td>
         </tr>
       ))}</tbody></table></div></div>
-    {modal&&<ContactForm contact={modal==="add"?null:modal} customFields={customFields} onClose={()=>setModal(null)} onSave={doSave} users={users}/>}
+    {modal&&<ContactForm contact={modal==="add"?null:modal} customFields={customFields} onClose={()=>setModal(null)} onSave={doSave} users={users} onAddTask={handleAddTaskFromContact} onDelete={id=>{if(window.confirm("Permanently delete this contact?"))doDel(id);setModal(null);}}/>}
     {confirm&&<Confirm msg="Delete this contact?" onConfirm={()=>doDel(confirm)} onCancel={()=>setConfirm(null)}/>}
   </div>);
 }
@@ -1387,10 +1781,13 @@ function Tasks({tasks,setTasks,customFields,toast,contacts,setContacts,deals,set
   const[tab,setTab]=useState("Open");const[modal,setModal]=useState(null);const[confirm,setConfirm]=useState(null);
   const[openDealModal,setOpenDealModal]=useState(null);
 
+  const prefillChecked=useRef(false);
   useEffect(()=>{
+    if(prefillChecked.current)return;
+    prefillChecked.current=true;
     const p=localStorage.getItem("bba_task_prefill");
     if(p){try{const d=JSON.parse(p);if(d._prefill){localStorage.removeItem("bba_task_prefill");const{_prefill,...rest}=d;setModal({...rest,_prefill:true});}}catch{}}
-  });
+  },[]);
 
   const appendNotesToDeal=async(clean)=>{
     if(!clean.notes||!clean.relatedDeal)return;
@@ -1410,8 +1807,9 @@ function Tasks({tasks,setTasks,customFields,toast,contacts,setContacts,deals,set
     }
     await appendNotesToDeal(clean);
     try{
-      if(modal==="add"||modal?._prefill){
-        // ensure creator retains visibility
+      const existingTask=clean.id?tasks.find(t=>t.id===clean.id):null;
+      if(!existingTask&&(modal==="add"||modal?._prefill)){
+        // genuine new task
         const assignees=clean.assignees||[];
         if(!isAdmin&&currentUser?.email&&!assignees.map(e=>e.toLowerCase()).includes(currentUser.email.toLowerCase())){
           clean.assignees=[...assignees,currentUser.email];
@@ -1419,7 +1817,9 @@ function Tasks({tasks,setTasks,customFields,toast,contacts,setContacts,deals,set
         const n={...clean,id:genId("TK")};
         await DB.upsertTask(objToRow(n));setTasks(p=>[...p,n]);toast("Task added","success");
       }else{
-        const n={...modal,...clean};await DB.upsertTask(objToRow(n));setTasks(p=>p.map(t=>t.id===modal.id?n:t));toast("Task updated","success");
+        // update existing task — always use the existing id
+        const n={...(existingTask||modal),...clean,id:clean.id||(existingTask||modal).id};
+        await DB.upsertTask(objToRow(n));setTasks(p=>p.map(t=>t.id===n.id?n:t));toast("Task updated","success");
       }
       setModal(null);
     }catch(e){toast("Save failed: "+e.message,"error");}
@@ -1487,7 +1887,7 @@ function Tasks({tasks,setTasks,customFields,toast,contacts,setContacts,deals,set
 ═══════════════════════════════════════════════════════════════ */
 function Reports({deals}){
   const[tab,setTab]=useState("pipeline");
-  const cDeals=deals.map(computeDeal);const active=cDeals.filter(d=>d.status==="Active");const dead=cDeals.filter(d=>d.status==="Dead");
+  const cDeals=deals.map(computeDeal);const active=cDeals.filter(d=>d.status==="Active");const dead=cDeals.filter(d=>d.status==="Closed/Lost");
   const bystage=STAGES.map(s=>({s,cnt:deals.filter(d=>d.stage===s).length,val:deals.filter(d=>d.stage===s).reduce((x,d)=>x+(parseFloat(d.askingPrice)||0),0)})).filter(x=>x.cnt>0);
   const bySource=LEAD_SOURCES.map(s=>({s,cnt:deals.filter(d=>d.leadSource===s).length,active:active.filter(d=>d.leadSource===s).length,dead:dead.filter(d=>d.leadSource===s).length,loi:deals.filter(d=>d.leadSource===s&&d.loiSubmitted).length,scores:cDeals.filter(d=>d.leadSource===s&&d.overallDealScore).map(d=>parseFloat(d.overallDealScore))})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
   const byIndustry=INDUSTRIES.map(s=>({s,cnt:deals.filter(d=>d.industry===s).length})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
@@ -1496,7 +1896,7 @@ function Reports({deals}){
   const medEbitda=median(withEbitda.map(d=>parseFloat(d.apToEbitda)));const medSde=median(withSde.map(d=>parseFloat(d.apToSde)));
   const fin=cDeals.filter(d=>d.financeabilityStatus);const finGood=fin.filter(d=>d.financeabilityStatus==="Financeable");const finBorder=fin.filter(d=>d.financeabilityStatus==="Borderline");const finBad=fin.filter(d=>d.financeabilityStatus==="Not Financeable");
   const scored=cDeals.filter(d=>d.overallDealScore).sort((a,b)=>(parseFloat(b.overallDealScore)||0)-(parseFloat(a.overallDealScore)||0));
-  const TABS=[{id:"pipeline",label:"Pipeline"},{id:"financial",label:"Financial"},{id:"scoring",label:"Scoring"},{id:"source",label:"Source & Broker"},{id:"diligence",label:"Diligence"},{id:"dead",label:"Dead Deals"},{id:"forecast",label:"Forecast"}];
+  const TABS=[{id:"pipeline",label:"Pipeline"},{id:"financial",label:"Financial"},{id:"scoring",label:"Scoring"},{id:"source",label:"Source & Broker"},{id:"diligence",label:"Diligence"},{id:"dead",label:"Closed/Lost Deals"},{id:"forecast",label:"Forecast"}];
   const BarRow=({label,value,max,fmtFn=String})=>(<div style={{marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12.5,fontWeight:600}}>{label}</span><span style={{fontSize:12,fontFamily:"DM Mono,monospace",color:"var(--text-2)"}}>{fmtFn(value)}</span></div><div className="prog-bar"><div className="prog-fill" style={{width:`${max?Math.min(value/max*100,100):0}%`,background:"var(--primary)"}}/></div></div>);
   return(<div>
     <div className="tab-bar" style={{marginBottom:20}}>{TABS.map(t=><button key={t.id} className={`tab-btn${tab===t.id?" active":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>)}</div>
@@ -1575,27 +1975,208 @@ function ImportExcel({setContacts,setDeals,setMeetings,setTasks,toast}){
 /* ═══════════════════════════════════════════════════════════════
    SETTINGS
 ═══════════════════════════════════════════════════════════════ */
-function Settings({customFields,setCustomFields,buyBox,setBuyBox,saveCF,saveBB}){
-  const[tab,setTab]=useState("custom");
-  const[bb,setBb]=useState({...buyBox});
-  const saveBuyBox=()=>{saveBB(bb);};
-  const f=k=>e=>setBb(p=>({...p,[k]:e.target.value}));
+/* ═══════════════════════════════════════════════════════════════
+   RECYCLE BIN
+═══════════════════════════════════════════════════════════════ */
+function RecycleBin({onRestore,toast}){
+  const[bin,setBin]=useState(()=>{try{return JSON.parse(localStorage.getItem("bba_recycle_bin")||"[]");}catch{return[];}});
+  const[confirm,setConfirm]=useState(null);
+  const fmtDate=ts=>{if(!ts)return"—";const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});};
+  const doRestore=async deal=>{
+    try{
+      const{_deletedAt,...clean}=deal;
+      await DB.upsertDeal(objToRow(clean));
+      onRestore(clean);
+      const updated=bin.filter(d=>d.id!==deal.id);
+      setBin(updated);
+      localStorage.setItem("bba_recycle_bin",JSON.stringify(updated));
+      toast(`Deal "${clean.companyName}" restored to pipeline`,"success");
+    }catch(e){toast("Restore failed: "+e.message,"error");}
+  };
+  const permDelete=id=>{
+    const updated=bin.filter(d=>d.id!==id);
+    setBin(updated);
+    localStorage.setItem("bba_recycle_bin",JSON.stringify(updated));
+    setConfirm(null);
+    toast("Permanently deleted","success");
+  };
+  const clearAll=()=>{setBin([]);localStorage.removeItem("bba_recycle_bin");setConfirm(null);};
+  if(!bin.length)return(
+    <div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-3)"}}>
+      <div style={{fontSize:32,marginBottom:10}}>🗑️</div>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Recycle Bin is empty</div>
+      <div style={{fontSize:13}}>Deleted deals appear here and can be restored within the last 50 deletions.</div>
+    </div>
+  );
   return(<div>
-    <div className="tab-bar" style={{marginBottom:20}}><button className={`tab-btn${tab==="custom"?" active":""}`} onClick={()=>setTab("custom")}>Custom Fields</button><button className={`tab-btn${tab==="buybox"?" active":""}`} onClick={()=>setTab("buybox")}>Buy-Box Criteria</button></div>
-    {tab==="custom"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>{["Deals","Contacts","Tasks","Meetings"].map(e=><div key={e}><div style={{fontFamily:"Cormorant Garamond,serif",fontSize:16,fontWeight:600,marginBottom:8}}>{e}</div><CustomFieldsManager entityType={e} customFields={customFields} setCustomFields={cf=>{setCustomFields(cf);saveCF(cf);}}/></div>)}</div>}
-    {tab==="buybox"&&<div className="card" style={{maxWidth:600}}><div className="card-title">🎯 Buy-Box Criteria</div><div style={{fontSize:13,color:"var(--text-2)",marginBottom:16,lineHeight:1.6}}>Set your acquisition criteria. Deals will be automatically scored against these parameters.</div>
-      <div className="form-grid">
-        <div className="fg"><label className="form-label">Min Revenue</label><CurrencyInput value={bb.minRevenue||""} onChange={e=>setBb(p=>({...p,minRevenue:e.target.value}))}/></div>
-        <div className="fg"><label className="form-label">Max Revenue</label><CurrencyInput value={bb.maxRevenue||""} onChange={e=>setBb(p=>({...p,maxRevenue:e.target.value}))}/></div>
-        <div className="fg"><label className="form-label">Min SDE</label><CurrencyInput value={bb.minSde||""} onChange={e=>setBb(p=>({...p,minSde:e.target.value}))}/></div>
-        <div className="fg"><label className="form-label">Min EBITDA</label><CurrencyInput value={bb.minEbitda||""} onChange={e=>setBb(p=>({...p,minEbitda:e.target.value}))}/></div>
-        <div className="fg"><label className="form-label">Max EBITDA Multiple</label><NoFillInput className="form-input" type="number" value={bb.maxMultiple||""} onChange={e=>setBb(p=>({...p,maxMultiple:e.target.value}))} placeholder="e.g. 5"/></div>
-        <div className="fg"><label className="form-label">Min DSCR</label><NoFillInput className="form-input" type="number" value={bb.minDscr||""} onChange={e=>setBb(p=>({...p,minDscr:e.target.value}))} placeholder="e.g. 1.25"/></div>
-        <div className="fg full"><label className="form-label">Target Industries</label><select className="form-select" multiple value={bb.targetIndustries||[]} onChange={e=>setBb(p=>({...p,targetIndustries:Array.from(e.target.selectedOptions,o=>o.value)}))} style={{minHeight:120}}>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select><div style={{fontSize:11,color:"var(--text-3)",marginTop:4}}>Hold Ctrl/Cmd to select multiple</div></div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <div style={{fontSize:13,color:"var(--text-2)"}}>{bin.length} deleted deal{bin.length!==1?"s":""} — recoverable</div>
+      <button className="btn btn-danger btn-sm" onClick={()=>setConfirm("all")}>🗑 Clear All</button>
+    </div>
+    {bin.map(deal=>(
+      <div key={deal.id} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",background:"var(--bg)",borderRadius:8,border:"1px solid var(--border)",marginBottom:8}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:600,fontSize:13}}>{deal.companyName}</div>
+          <div style={{fontSize:11,color:"var(--text-3)",marginTop:2}}>
+            {deal.stage} · {deal.industry||"—"} · Deleted {fmtDate(deal._deletedAt)}
+          </div>
+          {deal.askingPrice&&<div style={{fontSize:11,color:"var(--text-3)",fontFamily:"DM Mono,monospace"}}>{`$${parseFloat(deal.askingPrice).toLocaleString()}`}</div>}
+        </div>
+        <button className="btn btn-success btn-sm" onClick={()=>doRestore(deal)}>↩ Restore</button>
+        <button className="btn btn-danger btn-sm" onClick={()=>setConfirm(deal.id)}>Delete Forever</button>
       </div>
-      <div style={{marginTop:16}}><button className="btn btn-primary" onClick={saveBuyBox}>Save Buy-Box</button></div>
-    </div>}
+    ))}
+    {confirm&&<Confirm
+      msg={confirm==="all"?"Permanently delete ALL deals in the recycle bin? This cannot be undone.":"Permanently delete this deal? This cannot be undone."}
+      onConfirm={()=>confirm==="all"?clearAll():permDelete(confirm)}
+      onCancel={()=>setConfirm(null)}
+    />}
   </div>);
+}
+
+/* ── Settings Error Boundary ────────────────────────────────── */
+class SettingsErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  render(){
+    if(this.state.hasError)return(
+      <div style={{padding:24,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10}}>
+        <div style={{fontWeight:700,color:"#dc2626",marginBottom:8}}>⚠ Settings failed to render</div>
+        <div style={{fontSize:12,color:"#dc2626",fontFamily:"monospace"}}>{this.state.error?.message}</div>
+        <button className="btn btn-secondary btn-sm" style={{marginTop:12}} onClick={()=>this.setState({hasError:false,error:null})}>Try Again</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+function Settings({customFields,setCustomFields,buyBox,setBuyBox,saveCF,saveBB,onRestoreDeal,toast}){
+  const[tab,setTab]=useState("custom");
+  // defensive copy — ensure all values are strings/numbers, never undefined
+  const safeBB={
+    minRevenue:String(buyBox?.minRevenue||""),
+    maxRevenue:String(buyBox?.maxRevenue||""),
+    minSde:String(buyBox?.minSde||""),
+    minEbitda:String(buyBox?.minEbitda||""),
+    maxMultiple:String(buyBox?.maxMultiple||""),
+    minDscr:String(buyBox?.minDscr||""),
+    targetIndustries:Array.isArray(buyBox?.targetIndustries)?buyBox.targetIndustries:[],
+  };
+  const[bb,setBb]=useState(safeBB);
+  const updateBb=useCallback((k,v)=>setBb(p=>({...p,[k]:v})),[]);
+  const saveBuyBox=useCallback(()=>{saveBB(bb);},[bb,saveBB]);
+
+  return(
+    <div>
+      <div className="tab-bar" style={{marginBottom:20}}>
+        <button type="button" className={`tab-btn${tab==="custom"?" active":""}`} onClick={()=>setTab("custom")}>Custom Fields</button>
+        <button type="button" className={`tab-btn${tab==="buybox"?" active":""}`} onClick={()=>setTab("buybox")}>Buy-Box Criteria</button>
+        <button type="button" className={`tab-btn${tab==="recycle"?" active":""}`} onClick={()=>setTab("recycle")}>🗑 Recycle Bin</button>
+      </div>
+
+      {tab==="custom"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {["Deals","Contacts","Tasks","Meetings"].map(entity=>(
+            <div key={entity}>
+              <div style={{fontFamily:"Cormorant Garamond,serif",fontSize:17,fontWeight:600,marginBottom:10,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>{entity}</div>
+              <CustomFieldsManager entityType={entity} customFields={customFields} setCustomFields={cf=>{setCustomFields(cf);saveCF(cf);}}/>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab==="buybox"&&(
+        <div className="card" style={{maxWidth:600}}>
+          <div className="card-title">🎯 Buy-Box Criteria</div>
+          <div style={{fontSize:13,color:"var(--text-2)",marginBottom:20,lineHeight:1.65}}>
+            Set your acquisition criteria. Deals in the pipeline will be automatically scored as Exact Match, Partial Match, or Outside Buy Box.
+          </div>
+          <div className="form-grid">
+            <div className="fg">
+              <label className="form-label">Min Revenue</label>
+              <BuyBoxCurrencyField value={bb.minRevenue} onChange={v=>updateBb("minRevenue",v)}/>
+            </div>
+            <div className="fg">
+              <label className="form-label">Max Revenue</label>
+              <BuyBoxCurrencyField value={bb.maxRevenue} onChange={v=>updateBb("maxRevenue",v)}/>
+            </div>
+            <div className="fg">
+              <label className="form-label">Min SDE</label>
+              <BuyBoxCurrencyField value={bb.minSde} onChange={v=>updateBb("minSde",v)}/>
+            </div>
+            <div className="fg">
+              <label className="form-label">Min EBITDA</label>
+              <BuyBoxCurrencyField value={bb.minEbitda} onChange={v=>updateBb("minEbitda",v)}/>
+            </div>
+            <div className="fg">
+              <label className="form-label">Max EBITDA Multiple</label>
+              <input
+                type="number"
+                className="form-input"
+                value={bb.maxMultiple}
+                onChange={e=>updateBb("maxMultiple",e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}}
+                placeholder="e.g. 5"
+                autoComplete="off"
+              />
+            </div>
+            <div className="fg">
+              <label className="form-label">Min DSCR</label>
+              <input
+                type="number"
+                className="form-input"
+                value={bb.minDscr}
+                onChange={e=>updateBb("minDscr",e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}}
+                placeholder="e.g. 1.25"
+                autoComplete="off"
+              />
+            </div>
+            <div className="fg full">
+              <label className="form-label">Target Industries <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(hold Ctrl/Cmd to select multiple)</span></label>
+              <select
+                className="form-select"
+                multiple
+                value={bb.targetIndustries}
+                onChange={e=>updateBb("targetIndustries",Array.from(e.target.selectedOptions,o=>o.value))}
+                style={{minHeight:140}}
+              >
+                {INDUSTRIES.map(i=><option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{marginTop:20,display:"flex",gap:10,alignItems:"center"}}>
+            <button type="button" className="btn btn-primary" onClick={saveBuyBox}>Save Buy-Box</button>
+            <button type="button" className="btn btn-secondary" onClick={()=>setBb(safeBB)}>Reset</button>
+            {bb.targetIndustries.length>0&&<span style={{fontSize:12,color:"var(--text-3)"}}>{bb.targetIndustries.length} industr{bb.targetIndustries.length===1?"y":"ies"} selected</span>}
+          </div>
+        </div>
+      )}
+
+      {tab==="recycle"&&<RecycleBin onRestore={onRestoreDeal} toast={toast}/>}
+    </div>
+  );
+}
+
+/* ── BuyBoxCurrencyField — number only, no text formatting ───── */
+function BuyBoxCurrencyField({value,onChange}){
+  return(
+    <div style={{position:"relative"}}>
+      <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--text-3)",fontSize:13,pointerEvents:"none"}}>$</span>
+      <input
+        type="number"
+        className="form-input"
+        style={{paddingLeft:22}}
+        value={value||""}
+        min="0"
+        step="1000"
+        onChange={e=>onChange(e.target.value)}
+        onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter"||e.key==="Return")e.preventDefault();}}
+        autoComplete="off"
+        placeholder="0"
+      />
+    </div>
+  );
 }
 
 /* ── SidebarUserMenu ─────────────────────────────────────────── */
@@ -1663,6 +2244,30 @@ const NAV_USER=[
 const TOPBAR_MAP={dashboard:{title:"Dashboard",sub:"Acquisition cockpit"},pipeline:{title:"Pipeline",sub:"Deal tracking & underwriting"},contacts:{title:"Contacts",sub:"Brokers, sellers & advisors"},meetings:{title:"Meetings",sub:"Calls, site visits & closing meetings"},tasks:{title:"Tasks",sub:"Actions & follow-ups"},reports:{title:"Reports & Analytics",sub:"Pipeline · Financial · Scoring · Source · Diligence · Forecast"},templates:{title:"Email Templates",sub:"8 professional templates"},import:{title:"Import from Excel",sub:".xlsx import for deals, contacts, meetings & tasks"},users:{title:"User Management",sub:"Manage team access and credentials"},settings:{title:"Settings",sub:"Custom fields · Buy-box criteria"}};
 
 function App(){
+  // Prevent accidental navigation when running from file:// protocol
+  useEffect(()=>{
+    const preventNav=e=>{
+      // block any navigation away from the app
+      if(window.location.protocol==="file:"){
+        e.preventDefault();
+        e.returnValue="";
+        return false;
+      }
+    };
+    const preventClick=e=>{
+      // block any anchor clicks that would navigate away
+      const a=e.target.closest("a[href]");
+      if(a&&a.getAttribute("href")&&!a.getAttribute("href").startsWith("mailto:")&&!a.getAttribute("href").startsWith("tel:")){
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload",preventNav);
+    document.addEventListener("click",preventClick,true);
+    return()=>{
+      window.removeEventListener("beforeunload",preventNav);
+      document.removeEventListener("click",preventClick,true);
+    };
+  },[]);
   const[section,setSection]=useState("dashboard");
   const[currentUser,setCurrentUser]=useState(null);// {email, full_name, role, is_super_admin}
   const[users,setUsers]=useState([]);
@@ -1729,6 +2334,14 @@ function App(){
       if(raw){window.history.replaceState({},"",window.location.pathname);processImport(raw,rawDeals.map(rowToObj),user);}
       const pending=sessionStorage.getItem("bba_pending_import");
       if(pending){sessionStorage.removeItem("bba_pending_import");processImport(pending,rawDeals.map(rowToObj),user);}
+      // handle ?open=DEAL_ID — just navigate to pipeline and open the deal
+      const pendingOpen=sessionStorage.getItem("bba_pending_open");
+      if(pendingOpen){
+        sessionStorage.removeItem("bba_pending_open");
+        setSection("pipeline");
+        localStorage.setItem("bba_import_open",pendingOpen);
+        toast(`🔄 Opening deal…`,"success");
+      }
     }catch(e){console.error("loadData error:",e);toast("Failed to load data: "+e.message,"error");setAppState("ready");}
   };
 
@@ -1775,7 +2388,9 @@ function App(){
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     const raw=params.get("import");
+    const openId=params.get("open");
     if(raw){window.history.replaceState({},"",window.location.pathname);sessionStorage.setItem("bba_pending_import",raw);}
+    if(openId){window.history.replaceState({},"",window.location.pathname);sessionStorage.setItem("bba_pending_open",openId);}
   },[]);
 
   const processImport=async(raw,existingDeals,user)=>{
@@ -1911,7 +2526,7 @@ function App(){
         {section==="templates"&&<EmailTemplates toast={toast}/>}
         {section==="import"&&isAdmin&&<ImportExcel setContacts={setContacts} setDeals={setDeals} setMeetings={setMeetings} setTasks={setTasks} toast={toast}/>}
         {section==="users"&&isAdmin&&<UserManagement users={users} setUsers={setUsers} currentUser={currentUser} toast={toast} onMigrateComplete={()=>loadData(currentUser,null)}/>}
-        {section==="settings"&&isAdmin&&<Settings customFields={customFields} setCustomFields={setCustomFields} buyBox={buyBox} setBuyBox={setBuyBox} saveCF={saveCF} saveBB={saveBB}/>}
+        {section==="settings"&&isAdmin&&<SettingsErrorBoundary><Settings customFields={customFields} setCustomFields={setCustomFields} buyBox={buyBox} setBuyBox={setBuyBox} saveCF={saveCF} saveBB={saveBB} onRestoreDeal={deal=>{setDeals(p=>[...p,deal]);setSection("pipeline");toast(`Deal "${deal.companyName}" restored`,"success");}} toast={toast}/></SettingsErrorBoundary>}
       </div>
     </div>
     <Toasts toasts={toasts}/>

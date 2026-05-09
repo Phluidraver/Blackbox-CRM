@@ -567,7 +567,7 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
     <div className="modal xl">
       <div className="modal-hdr">
         <div>
-          <div className="modal-title">{deal&&!deal._isNew?"Edit Deal":"Add Deal"}</div>
+          <div className="modal-title">{deal&&!deal._isNew?(form.companyName||"Edit Deal"):"Add Deal"}</div>
           {form.id&&!form._isNew&&<div style={{fontSize:11,color:"var(--text-3)",marginTop:2,fontFamily:"DM Mono,monospace",letterSpacing:"0.3px"}}>ID: {form.id}</div>}
         </div>
         <button className="btn btn-ghost btn-icon" onClick={tryClose}><Ic.X/></button>
@@ -590,7 +590,6 @@ function DealForm({deal,customFields,onClose,onSave,onAddTask,onDelete,tasks,onO
               <div className="fg"><label className="form-label">Last Activity</label><NoFillInput className="form-input" type="date" value={form.lastActivityDate} onChange={f("lastActivityDate")}/></div>
               <div className="fg"><label className="form-label">Est. Close Date</label><NoFillInput className="form-input" type="date" value={form.estimatedCloseDate} onChange={f("estimatedCloseDate")}/></div>
               <div className="fg"><label className="form-label">Close Probability %</label><PctInput value={form.closeProbabilityPct} onChange={f("closeProbabilityPct")} placeholder="50.0"/></div>
-              <div className="fg"><label className="form-label">LOI Submitted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiSubmitted?"on":""}`} onClick={()=>tog("loiSubmitted")}/><span style={{fontSize:13}}>{form.loiSubmitted?"Yes":"No"}</span></div></div>
               <div className="fg"><label className="form-label">LOI Accepted</label><div className="toggle-wrap"><button type="button" className={`toggle ${form.loiAccepted?"on":""}`} onClick={()=>tog("loiAccepted")}/><span style={{fontSize:13}}>{form.loiAccepted?"Yes":"No"}</span></div></div>
               {form.loiAccepted&&<div className="fg"><label className="form-label">Exclusivity End Date</label><NoFillInput className="form-input" type="date" value={form.exclusivityEndDate} onChange={f("exclusivityEndDate")}/></div>}
               {(form.status==="Closed/Lost"||form.stage==="Closed/Lost")&&<div className="fg"><label className="form-label">Dead Reason</label><select className="form-select" value={form.deadReason} onChange={f("deadReason")}><option value="">Select…</option>{DEAD_REASONS.map(r=><option key={r}>{r}</option>)}</select></div>}
@@ -1170,11 +1169,24 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
       if(deal){
         const bin=JSON.parse(localStorage.getItem("bba_recycle_bin")||"[]");
         bin.unshift({...deal,_deletedAt:new Date().toISOString()});
-        localStorage.setItem("bba_recycle_bin",JSON.stringify(bin.slice(0,50)));// keep last 50
+        localStorage.setItem("bba_recycle_bin",JSON.stringify(bin.slice(0,50)));
       }
-      await DB.deleteDeal(id);setDeals(p=>p.filter(d=>d.id!==id));
+      await DB.deleteDeal(id);
+      setDeals(p=>p.filter(d=>d.id!==id));
       try{localStorage.removeItem(`bba_files_${id}`);}catch{}
-      toast("Deal deleted (recoverable from Recycle Bin in Settings)","success");
+      // delete all tasks associated with this deal
+      if(deal){
+        const dealTasks=tasks.filter(t=>t.relatedDeal===deal.companyName);
+        for(const t of dealTasks){
+          try{await DB.deleteTask(t.id);}catch{}
+        }
+        if(dealTasks.length>0){
+          setTasks(p=>p.filter(t=>t.relatedDeal!==deal.companyName));
+          toast(`Deal deleted — ${dealTasks.length} associated task${dealTasks.length>1?"s":""} also removed`,"success");
+        }else{
+          toast("Deal deleted (recoverable from Recycle Bin in Settings)","success");
+        }
+      }
       setConfirm(null);setModal(null);
     }
     catch(e){toast("Delete failed: "+e.message,"error");}
@@ -1235,7 +1247,21 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
     }catch(e){toast("Update failed","error");}
     setClosedReasonModal(null);setClosedReasonVal("");
   };
-  const handleAddTask=dealForm=>{setModal(null);setTaskPrefill({relatedDeal:dealForm.companyName||"",company:dealForm.companyName||"",relatedContact:dealForm.contactName||"",_prefill:true});};
+  const handleAddTask=dealForm=>{
+    setModal(null);
+    // auto-populate contact info: prefer contact fields, fall back to broker fields
+    const contactName=dealForm.contactName||"";
+    const contactEmail=dealForm.contactEmail||(dealForm.brokerDeal?dealForm.brokerEmail:"")||"";
+    const contactPhone=dealForm.contactPhone||(dealForm.brokerDeal?dealForm.brokerPhone:"")||"";
+    setTaskPrefill({
+      relatedDeal:dealForm.companyName||"",
+      company:dealForm.companyName||"",
+      relatedContact:contactName,
+      contactEmail,
+      contactPhone,
+      _prefill:true
+    });
+  };
   const saveTask=async form=>{
     const{_prefill,...clean}=form;
     if(clean.relatedContact||clean.contactEmail){
@@ -1302,7 +1328,7 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
   // check if deal has files
   const hasFiles=dealId=>{try{const f=JSON.parse(localStorage.getItem(`bba_files_${dealId}`)||"[]");return f.length>0;}catch{return false;}};
   // color for table row company name
-  const getDealNameColor=dealId=>{const s=getDealTaskStatus(dealId);if(s==="none")return"#dc2626";if(s==="overdue")return"#F15C2B";return"var(--text)";};
+  const getDealNameColor=dealId=>{const s=getDealTaskStatus(dealId);if(s==="none")return"#dc2626";if(s==="overdue")return"#2563EB";return"var(--text)";};
 
   return(<div>
     <div className="saved-views">{SAVED_VIEWS.map(v=><div key={v.id} className={`view-chip ${savedView===v.id?"active":""}`} onClick={()=>setSavedView(v.id)}>{v.label}</div>)}</div>
@@ -1373,7 +1399,7 @@ function Pipeline({deals,setDeals,contacts,setContacts,customFields,toast,setTas
           return(
           <div key={stage} className="kanban-col" onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("drag-over");}} onDragLeave={e=>e.currentTarget.classList.remove("drag-over")} onDrop={e=>{e.currentTarget.classList.remove("drag-over");const id=e.dataTransfer.getData("id");if(id)move(id,stage);}}>
             <div className="kanban-col-hdr"><div><div className="kanban-col-title">{stage}</div><div className="kanban-col-meta">{sl.length} · {fmt$Short(sl.reduce((s,d)=>s+(parseFloat(d.askingPrice)||0),0))}</div></div></div>
-            <div className="kanban-cards">{sl.map(d=>{const ts=getDealTaskStatus(d.id);const fls=hasFiles(d.id);const borderColor=ts==="none"?"#FCA5A5":ts==="overdue"?"#F15C2B":"var(--border)";const nameColor=ts==="none"?"#dc2626":ts==="overdue"?"#F15C2B":"var(--text)";return(<div key={d.id} className="kanban-card" draggable onDragStart={e=>e.dataTransfer.setData("id",d.id)} onClick={()=>setModal(d)} style={{borderColor}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:4}}><div className="kanban-card-co" style={{color:nameColor,flex:1}}>{d.companyName}</div>{fls&&<span title="Has files attached" style={{fontSize:12,flexShrink:0,color:"var(--text-3)"}}>📎</span>}</div><div className="kanban-card-sub">{d.leadSource||"—"} · {d.industry||"—"}</div>{d.overallDealScore&&<div style={{fontFamily:"DM Mono,monospace",fontSize:11,color:"var(--primary)",fontWeight:700}}>★ {d.overallDealScore}</div>}<div className="kanban-card-foot"><div className="kanban-card-val">{d.askingPrice?fmt$Short(d.askingPrice):"No price"}</div>{d.financeabilityStatus&&<span style={{fontSize:10,fontWeight:600,color:d.financeabilityStatus==="Financeable"?"#16a34a":d.financeabilityStatus==="Borderline"?"#d97706":"#dc2626"}}>{d.financeabilityStatus==="Financeable"?"✓":"~"}</span>}</div></div>);})}</div>
+            <div className="kanban-cards">{sl.map(d=>{const ts=getDealTaskStatus(d.id);const fls=hasFiles(d.id);const borderColor=ts==="none"?"#FCA5A5":ts==="overdue"?"#2563EB":"var(--border)";const nameColor=ts==="none"?"#dc2626":ts==="overdue"?"#2563EB":"var(--text)";return(<div key={d.id} className="kanban-card" draggable onDragStart={e=>e.dataTransfer.setData("id",d.id)} onClick={()=>setModal(d)} style={{borderColor}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:4}}><div className="kanban-card-co" style={{color:nameColor,flex:1}}>{d.companyName}</div>{fls&&<span title="Has files attached" style={{fontSize:12,flexShrink:0,color:"var(--text-3)"}}>📎</span>}</div><div className="kanban-card-sub">{d.leadSource||"—"} · {d.industry||"—"}</div>{d.overallDealScore&&<div style={{fontFamily:"DM Mono,monospace",fontSize:11,color:"var(--primary)",fontWeight:700}}>★ {d.overallDealScore}</div>}<div className="kanban-card-foot"><div className="kanban-card-val">{d.askingPrice?fmt$Short(d.askingPrice):"No price"}</div>{d.financeabilityStatus&&<span style={{fontSize:10,fontWeight:600,color:d.financeabilityStatus==="Financeable"?"#16a34a":d.financeabilityStatus==="Borderline"?"#d97706":"#dc2626"}}>{d.financeabilityStatus==="Financeable"?"✓":"~"}</span>}</div></div>);})}</div>
           </div>
         );})}
       </div>
@@ -1835,7 +1861,15 @@ function Tasks({tasks,setTasks,customFields,toast,contacts,setContacts,deals,set
     await appendNotesToDeal(clean);
     const completed={...clean,status:"Completed"};
     try{await DB.upsertTask(objToRow(completed));setTasks(p=>p.map(t=>t.id===clean.id?completed:t));toast("Task completed","success");}catch(e){}
-    setModal({owner:clean.owner||"",relatedContact:clean.relatedContact||"",contactEmail:clean.contactEmail||"",contactPhone:clean.contactPhone||"",company:clean.company||"",relatedDeal:clean.relatedDeal||"",status:"Open",title:"",taskType:"Follow-Up Call",dueDate:"",priority:"Medium",notes:"",customValues:{},assignees:clean.assignees||[],_prefill:true});
+    // carry ALL fields from the completed task into the new one, except clear the date, id, and status
+    setModal({
+      ...clean,
+      id:undefined,
+      dueDate:"",
+      status:"Open",
+      notes:"",
+      _prefill:true,
+    });
   };
   const toggle=async task=>{
     const ns=task.status==="Completed"?"Open":"Completed";const upd={...task,status:ns};
